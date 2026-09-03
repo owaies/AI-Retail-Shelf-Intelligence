@@ -2,11 +2,11 @@
 
 ## Status
 
-**Day 1 foundation · design direction selected**
+**Day 1 foundation · implementation established**
 
 ## Product Personality
 
-AI-powered retail intelligence should feel precise, visual, operational, and trustworthy. The interface should communicate computer-vision results quickly without becoming a generic enterprise dashboard.
+Precise, visual, operational and trustworthy. The interface should communicate computer-vision evidence quickly without becoming a generic enterprise dashboard or a movie-style HUD.
 
 ## Primary Visual Direction
 
@@ -20,96 +20,80 @@ This deliberately differs from JobTrack's Brutalist/Neo-Brutalist identity.
 
 ## Why This Fits
 
-Shelf intelligence is fundamentally a visual-analysis workflow. A futuristic visual language supports the idea of machine vision, detection overlays, processing states, spatial analysis, and live intelligence. The data-heavy layer keeps the experience practical for retail users who need counts, confidence, shelf status, and historical observations.
+Shelf intelligence is a visual-analysis workflow. A controlled futuristic language supports image overlays, processing states, spatial detection and model telemetry. The dashboard layer keeps the product useful for retail users who need counts, confidence and shelf status at a glance.
 
-## Design Principles
+## Typography
 
-1. **Vision first** · uploaded shelf imagery and detection results are the visual center of the product.
-2. **Evidence over decoration** · overlays and annotations should explain detected objects and shelf regions.
-3. **Fast scanning** · counts, confidence, status, and alerts should be readable at a glance.
-4. **Technical but approachable** · futuristic elements should support comprehension rather than imitate a movie HUD.
-5. **Responsive by design** · analysis results must remain usable on desktop and mobile widths.
-6. **Clear system states** · upload, processing, success, partial detection, empty result, and failure states must be explicit.
+- **Space Grotesk** · product headings and high-level metrics.
+- **DM Sans** · readable interface content and explanatory copy.
+- **Space Mono** · technical labels, statuses, timestamps and model metadata.
 
-## Typography Direction
+The implementation loads these open-source font families through CSS. A production deployment can self-host them later if external font loading is undesirable.
 
-- Strong geometric/display face for major product headings.
-- Highly readable sans-serif for interface content.
-- Monospace treatment for technical metadata such as detection confidence, processing states, timestamps, and model information.
+## Color System
 
-Final font choices will be made from available/open-source options during implementation.
+Semantic tokens used by the Day 1 shell:
 
-## Color Direction
+| Token | Value | Role |
+|---|---|---|
+| Technical base | `#080B10` | Application background |
+| Surface | `#10151D` | Primary panels |
+| Secondary surface | `#151C26` | Elevated panels |
+| Line | `#2B3543` | Borders/dividers |
+| Primary text | `#EDF3F7` | Main readable content |
+| Muted text | `#8F9BAA` | Supporting content |
+| Detection cyan | `#45E6FF` | Active vision/analysis signal |
+| Available lime | `#B8FF4A` | Positive/system state |
+| Warning orange | `#FFB454` | Future low-stock warning role |
+| Error pink | `#FF6B8B` | Error role |
+| Violet | `#9D7CFF` | Secondary analytics accent |
 
-Use a dark technical base with controlled luminous accents for detection states and data visualization. The final palette must maintain accessible text contrast and should not rely on color alone to communicate status.
-
-Suggested semantic roles:
-
-- Base: deep technical surface
-- Primary text: high-contrast light
-- Detection: luminous accent
-- Success/available: distinct positive accent
-- Warning/low-stock: high-visibility warning accent
-- Error: explicit error accent
-- Neutral analytics: restrained supporting tones
-
-Exact colors will be finalized in the frontend implementation.
+Color is never intended to be the sole carrier of status. Labels and text accompany semantic states.
 
 ## Layout
 
-Use a modular analysis workspace:
+The primary workspace is modular:
 
 ```text
-┌──────────────────────────────────────────────────────────┐
-│ Navigation / System Status                               │
-├───────────────────────────────┬──────────────────────────┤
-│ Shelf Image / Detection View  │ Analysis Summary         │
-│                               │ Counts / Confidence      │
-│                               │ Shelf Status             │
-├───────────────────────────────┴──────────────────────────┤
-│ History / Analytics / Shelf Observations                 │
-└──────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ Brand · Navigation · System status                          │
+├──────────────────────────────────┬───────────────────────────┤
+│ Shelf image / analysis workspace │ Metrics / pipeline state  │
+├──────────────────────────────────┴───────────────────────────┤
+│ History / analytics / observations                          │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-On smaller screens, convert the workspace into a logical vertical flow rather than shrinking the desktop canvas.
+On smaller screens, the workspace becomes a vertical flow. It is not a shrunken desktop canvas.
 
 ## Component Language
 
-- Precision cards with subtle depth
-- Technical labels
-- Detection bounding boxes
-- Image overlays
+- Precision cards with restrained depth
+- Technical labels and metadata
+- Detection bounding-box language for future inference results
+- Image-analysis surfaces
 - Status indicators
 - Metric tiles
+- Pipeline steps
 - Timeline/history rows
-- Filter controls
-- Processing indicators
-- Empty and error states
+- Clear empty/error states
 
-Avoid copying JobTrack's thick black borders, offset shadows, neon brutalist cards, or editorial composition as the dominant language.
+Avoid thick black borders, offset shadows, neon brutalist cards and editorial compositions from JobTrack.
 
 ## Motion
 
-Use restrained motion for:
-
-- Upload progress
-- Image processing state
-- Detection reveal
-- Filter transitions
-- Dashboard metric updates
-
-Motion must never block core interaction or make the product feel like a game.
+Use restrained motion for upload progress, processing, detection reveal and data updates. Respect `prefers-reduced-motion` and never make animation necessary for understanding or interaction.
 
 ## Accessibility
 
-- Keyboard-accessible controls
-- Visible focus states
-- Sufficient contrast
 - Semantic headings and landmarks
-- Text alternatives for meaningful images
-- Status communicated with text/icons in addition to color
-- Reduced-motion support where practical
+- Keyboard-accessible navigation and controls
+- Visible focus states
+- High-contrast text
+- Text/icon labels in addition to color
+- Meaningful alternative text for images
+- Reduced-motion support
 
 ## Decoration Rules
 
-Decorative grids, scanning lines, data markers, and technical motifs may reinforce the computer-vision theme, but must remain behind or outside critical content. No decorative layer should interfere with touch targets, text, or image annotations.
+Grid textures, scan lines and technical markers can reinforce the vision theme, but remain behind or outside critical content. Decorative layers must never interfere with text, image evidence or touch targets.
