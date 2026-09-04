@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api, getAccessToken, setAccessToken } from '../services/api'
@@ -6,7 +7,7 @@ import type { Analysis, AnalysisSummary } from '../types'
 function PageHeader({ index, eyebrow, title, description }: { index: string; eyebrow: string; title: string; description: string }) {
   return <section className="page-header"><div className="eyebrow"><span>{index}</span>{eyebrow}</div><h1>{title}</h1><p>{description}</p></section>
 }
-function EmptyPanel({ title, text, action }: { title: string; text: string; action?: React.ReactNode }) {
+function EmptyPanel({ title, text, action }: { title: string; text: string; action?: ReactNode }) {
   return <div className="empty-panel"><span className="cross" aria-hidden="true">+</span><strong>{title}</strong><p>{text}</p>{action}</div>
 }
 function ErrorNotice({ message }: { message: string }) { return <div className="error-notice" role="alert"><strong>REQUEST ERROR</strong><span>{message}</span></div> }
@@ -59,7 +60,7 @@ export function AnalyzePage() {
       <article className="panel upload-panel">
         <div className="panel-label">INPUT / IMAGE</div>
         <input ref={inputRef} className="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" onChange={e => choose(e.target.files?.[0])} />
-        {!file ? <button className="upload-zone" type="button" onClick={() => inputRef.current?.click()} onKeyDown={e => { if (e.key === 'Enter') inputRef.current?.click() }}><div className="scan-icon" aria-hidden="true">⌁</div><h2>Upload shelf image</h2><p>JPEG, PNG or WebP · 10 MB maximum</p><span className="secondary-button">CHOOSE IMAGE</span></button> : <div className="image-stage"><img src={preview} alt={`Selected shelf image: ${file.name}`} /><div className="stage-meta"><span>{file.name}</span><button className="secondary-button" type="button" onClick={() => inputRef.current?.click()}>REPLACE</button></div>{result && <div className="detection-layer" aria-label="Detection overlay">{result.detections.map((d, i) => <div key={`${d.class_name}-${i}`} className="detection-box" style={{ left: `${d.box.x / result.image_width * 100}%`, top: `${d.box.y / result.image_height * 100}%`, width: `${d.box.width / result.image_width * 100}%`, height: `${d.box.height / result.image_height * 100}%` }}><span>{d.class_name} · {(d.confidence * 100).toFixed(0)}%</span></div>)}</div>}</div>}
+        {!file ? <button className="upload-zone" type="button" onClick={() => inputRef.current?.click()}><div className="scan-icon" aria-hidden="true">⌁</div><h2>Upload shelf image</h2><p>JPEG, PNG or WebP · 10 MB maximum</p><span className="secondary-button">CHOOSE IMAGE</span></button> : <div className="image-stage"><img src={preview} alt={`Selected shelf image: ${file.name}`} /><div className="stage-meta"><span>{file.name}</span><button className="secondary-button" type="button" onClick={() => inputRef.current?.click()}>REPLACE</button></div>{result && <div className="detection-layer" aria-label="Detection overlay">{result.detections.map((d, i) => <div key={`${d.class_name}-${i}`} className="detection-box" style={{ left: `${d.box.x / result.image_width * 100}%`, top: `${d.box.y / result.image_height * 100}%`, width: `${d.box.width / result.image_width * 100}%`, height: `${d.box.height / result.image_height * 100}%` }}><span>{d.class_name} · {(d.confidence * 100).toFixed(0)}%</span></div>)}</div>}</div>}
         <button className="primary-button analyze-button" type="button" disabled={!file || busy} onClick={analyze}>{busy ? 'ANALYZING…' : result ? 'RUN AGAIN' : 'RUN ANALYSIS'} <span>↗</span></button>
       </article>
       <aside className="panel status-panel"><div className="panel-label">PIPELINE / STATUS</div><Pipeline active={step} />{result && <ResultSummary result={result} navigate={navigate} />}{!result && !busy && <div className="notice"><strong>READY</strong><p>Authentication is required by the backend. Configure a valid bearer token in Settings before running a stored analysis.</p></div>}</aside>
@@ -68,7 +69,7 @@ export function AnalyzePage() {
 }
 
 function ResultSummary({ result, navigate }: { result: Analysis; navigate: ReturnType<typeof useNavigate> }) {
-  return <div className="result-card"><div><span className="panel-label">RESULT / COMPLETE</span><strong>{result.detection_count} detections</strong></div><div className="result-grid">{Object.entries(result.class_counts).slice(0, 6).map(([name, count]) => <span key={name}><b>{count}</b>{name}</span>)}</div><p>{result.shelf_assessment.note}</p><button className="secondary-button" type="button" onClick={() => navigate(`/history`)}>OPEN HISTORY</button></div>
+  return <div className="result-card"><div><span className="panel-label">RESULT / COMPLETE</span><strong>{result.detection_count} detections</strong></div><div className="result-grid">{Object.entries(result.class_counts).slice(0, 6).map(([name, count]) => <span key={name}><b>{count}</b>{name}</span>)}</div><p>{result.shelf_assessment.note}</p><button className="secondary-button" type="button" onClick={() => navigate('/history')}>OPEN HISTORY</button></div>
 }
 
 function AnalysisTable({ items }: { items: AnalysisSummary[] }) {
@@ -78,7 +79,7 @@ function AnalysisTable({ items }: { items: AnalysisSummary[] }) {
 export function HistoryPage() {
   const [items, setItems] = useState<AnalysisSummary[]>([]); const [error, setError] = useState(''); const [selected, setSelected] = useState<Analysis | null>(null)
   useEffect(() => { api.analyses().then(setItems).catch(e => setError(e.message)) }, [])
-  useEffect(() => { const id = new URLSearchParams(location.search).get('id'); if (id) api.analysis(id).then(setSelected).catch(e => setError(e.message)) }, [])
+  useEffect(() => { const id = new URLSearchParams(window.location.search).get('id'); if (id) api.analysis(id).then(setSelected).catch(e => setError(e.message)) }, [])
   return <><PageHeader index="03" eyebrow="ANALYSIS HISTORY" title="Every scan, traceable." description="Browse real records returned by the FastAPI persistence layer, scoped to the authenticated user." />{error && <ErrorNotice message={error} />}{selected && <section className="panel detail-panel"><div><span className="panel-label">ANALYSIS / {selected.id.slice(0, 8)}</span><h2>{selected.image_name}</h2><p>{selected.detection_count} detections · {selected.model_name} {selected.model_version}</p></div><div className="result-grid">{Object.entries(selected.class_counts).map(([name, count]) => <span key={name}><b>{count}</b>{name}</span>)}</div><p className="muted">{selected.shelf_assessment.note}</p></section>}{items.length ? <AnalysisTable items={items} /> : <EmptyPanel title="NO ANALYSES RECORDED" text="Completed analyses will appear here after a successful authenticated run." />}</>
 }
 
