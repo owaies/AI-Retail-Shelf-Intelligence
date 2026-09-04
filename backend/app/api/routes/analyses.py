@@ -11,7 +11,7 @@ from app.db import connection, database_configured
 from app.repositories.analyses import AnalysisRepository
 from app.schemas.analysis import AnalysisListItem, AnalysisResponse, Detection, ShelfAssessment
 from app.services.vision import VisionService
-from app.utils.image_validation import validate_image_upload
+from app.utils.image_validation import safe_filename, validate_image_upload
 
 router = APIRouter(prefix="/analyses", tags=["analyses"])
 vision_service = VisionService()
@@ -51,7 +51,8 @@ async def create_analysis(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    suffix = Path(file.filename or "image").suffix.lower()
+    display_name = safe_filename(file.filename)
+    suffix = Path(display_name).suffix.lower()
     with tempfile.NamedTemporaryFile(prefix="retail-analysis-", suffix=suffix, delete=True) as temp:
         temp.write(data)
         temp.flush()
@@ -63,7 +64,7 @@ async def create_analysis(
             raise HTTPException(status_code=503, detail="Computer-vision inference is unavailable") from exc
 
     stored = repository.create(
-        user_id=user.id, email=user.email, image_name=Path(file.filename or "image").name,
+        user_id=user.id, email=user.email, image_name=display_name,
         width=analysis.width, height=analysis.height, detections=analysis.detections,
         model_name="YOLOX-Tiny", model_version="0.1.1rc0", object_coverage=analysis.object_coverage,
     )
