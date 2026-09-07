@@ -5,6 +5,9 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     app_name: str = "Retail Vision Intelligence API"
     database_url: str | None = Field(default=None, repr=False)
+    database_schema: str = "retail_shelf_intelligence"
+    supabase_url: str | None = Field(default=None, repr=False)
+    supabase_publishable_key: str | None = Field(default=None, repr=False)
     cors_origins: list[str] = ["http://localhost:5173"]
     jwt_secret_key: str | None = Field(default=None, repr=False)
     jwt_algorithm: str = "HS256"
@@ -16,6 +19,7 @@ class Settings(BaseSettings):
     nms_iou_threshold: float = 0.45
     max_model_bytes: int = 80 * 1024 * 1024
     max_upload_bytes: int = 10 * 1024 * 1024
+    max_request_body_bytes: int = 12 * 1024 * 1024
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
