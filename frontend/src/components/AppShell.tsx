@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { signOut } from '../services/auth'
 
 const navigation = [
   ['/', 'Dashboard'],
@@ -10,6 +11,13 @@ const navigation = [
 ] as const
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const navigate = useNavigate()
+
+  function handleSignOut() {
+    signOut()
+    navigate('/login', { replace: true })
+  }
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -31,6 +39,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           <span className="status-dot" aria-hidden="true" />
           <span>FOUNDATION ONLINE</span>
         </div>
+        <button className="sign-out-button" type="button" onClick={handleSignOut}>SIGN OUT</button>
       </header>
       <main className="page-content">{children}</main>
     </div>
