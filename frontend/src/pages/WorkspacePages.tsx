@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { api } from '../services/api'
-import { getAccessToken, signIn } from '../services/auth'
+import { getAccessToken } from '../services/auth'
 import type { Analysis, AnalysisSummary } from '../types'
 
 function PageHeader({ index, eyebrow, title, description }: { index: string; eyebrow: string; title: string; description: string }) {
