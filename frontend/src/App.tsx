@@ -1,7 +1,12 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
-import { AnalyticsPage, AnalyzePage, DashboardPage, HistoryPage, SettingsPage } from './pages'
+import { AnalyticsPage, AnalyzePage, DashboardPage, HistoryPage, LoginPage, SettingsPage } from './pages'
+import { getAccessToken } from './services/auth'
 import './styles.css'
+
+function Protected({ children }: { children: React.ReactNode }) {
+  return getAccessToken() ? <>{children}</> : <Navigate to="/login" replace />
+}
 
 function NotFound() {
   return <section className="empty-panel"><strong>ROUTE NOT FOUND</strong><p>The requested workspace does not exist.</p></section>
@@ -10,16 +15,15 @@ function NotFound() {
 export default function App() {
   return (
     <BrowserRouter>
-      <AppShell>
-        <Routes>
-          <Route path="/" element={<DashboardPage />} />
-          <Route path="/analyze" element={<AnalyzePage />} />
-          <Route path="/history" element={<HistoryPage />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </AppShell>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<Protected><AppShell><DashboardPage /></AppShell></Protected>} />
+        <Route path="/analyze" element={<Protected><AppShell><AnalyzePage /></AppShell></Protected>} />
+        <Route path="/history" element={<Protected><AppShell><HistoryPage /></AppShell></Protected>} />
+        <Route path="/analytics" element={<Protected><AppShell><AnalyticsPage /></AppShell></Protected>} />
+        <Route path="/settings" element={<Protected><AppShell><SettingsPage /></AppShell></Protected>} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
     </BrowserRouter>
   )
 }
