@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_issuer: str = "retail-shelf-intelligence"
     model_url: str = "https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_tiny.onnx"
-    model_path: str = ".cache/models/yolox_tiny.onnx"
+    model_path: str = "/tmp/retail-shelf-intelligence/yolox_tiny.onnx"
     model_input_size: int = 416
     detection_confidence: float = 0.25
     nms_iou_threshold: float = 0.45
