@@ -1,10 +1,7 @@
 import type { Analysis, AnalysisSummary, ApiHealth } from '../types'
+import { getAccessToken } from './auth'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api'
-const TOKEN_KEY = 'retail_vision_access_token'
-
-export function getAccessToken() { return localStorage.getItem(TOKEN_KEY) ?? '' }
-export function setAccessToken(token: string) { token.trim() ? localStorage.setItem(TOKEN_KEY, token.trim()) : localStorage.removeItem(TOKEN_KEY) }
 
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
