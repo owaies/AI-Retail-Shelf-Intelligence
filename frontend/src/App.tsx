@@ -1,10 +1,11 @@
+import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
 import { AnalyticsPage, AnalyzePage, DashboardPage, HistoryPage, LoginPage, SettingsPage } from './pages'
 import { getAccessToken } from './services/auth'
 import './styles.css'
 
-function Protected({ children }: { children: React.ReactNode }) {
+function Protected({ children }: { children: ReactNode }) {
   return getAccessToken() ? <>{children}</> : <Navigate to="/login" replace />
 }
 
