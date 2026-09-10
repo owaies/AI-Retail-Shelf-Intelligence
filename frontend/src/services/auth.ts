@@ -12,6 +12,15 @@ function assertConfigured() {
   if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
     throw new Error('Supabase authentication is not configured')
   }
+
+  try {
+    const url = new URL(SUPABASE_URL)
+    if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) {
+      throw new Error('invalid')
+    }
+  } catch {
+    throw new Error('Invalid Supabase URL. Use the HTTPS project URL, not a PostgreSQL database connection string.')
+  }
 }
 
 async function authRequest<T>(path: string, init: RequestInit): Promise<T> {
