@@ -8,7 +8,10 @@ class Settings(BaseSettings):
     database_schema: str = "retail_shelf_intelligence"
     supabase_url: str | None = Field(default=None, repr=False)
     supabase_publishable_key: str | None = Field(default=None, repr=False)
-    cors_origins: list[str] = ["http://localhost:5173"]
+    cors_origins: list[str] = [
+        "http://localhost:5173",
+        "https://ai-retail-shelf-intelligence.vercel.app",
+    ]
     jwt_secret_key: str | None = Field(default=None, repr=False)
     jwt_algorithm: str = "HS256"
     jwt_issuer: str = "retail-shelf-intelligence"
