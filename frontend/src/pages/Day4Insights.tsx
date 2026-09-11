@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../services/api'
-import type { AnalysisSummary } from '../types'
+import type { Analysis, AnalysisSummary } from '../types'
 
 function ErrorNotice({ message }: { message: string }) { return <div className="error-notice" role="alert"><strong>REQUEST ERROR</strong><span>{message}</span></div> }
 function EmptyPanel({ title, text }: { title: string; text: string }) { return <div className="empty-panel"><span className="cross" aria-hidden="true">+</span><strong>{title}</strong><p>{text}</p></div> }
@@ -39,18 +39,25 @@ export function Day4HistoryPage() {
 
 export function Day4AnalyticsPage() {
   const [items, setItems] = useState<AnalysisSummary[]>([])
+  const [details, setDetails] = useState<Analysis[]>([])
   const [error, setError] = useState('')
+  const [loadingDetails, setLoadingDetails] = useState(false)
   useEffect(() => { api.analyses().then(setItems).catch(e => setError(e.message)) }, [])
+  useEffect(() => {
+    if (!items.length) { setDetails([]); return }
+    setLoadingDetails(true)
+    Promise.all(items.map(item => api.analysis(item.id))).then(setDetails).catch(e => setError(e.message)).finally(() => setLoadingDetails(false))
+  }, [items])
   const total = items.reduce((sum, item) => sum + item.detection_count, 0)
   const average = items.length ? (total / items.length).toFixed(1) : '0'
-  const classes = useMemo(() => { const counts: Record<string, number> = {}; items.forEach(item => Object.entries(item.class_counts).forEach(([name, count]) => { counts[name] = (counts[name] || 0) + count })); return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8) }, [items])
+  const classes = useMemo(() => { const counts: Record<string, number> = {}; details.forEach(item => Object.entries(item.class_counts).forEach(([name, count]) => { counts[name] = (counts[name] || 0) + count })); return Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 8) }, [details])
   const max = classes[0]?.[1] || 1
   const models = useMemo(() => [...new Set(items.map(item => `${item.model_name} ${item.model_version}`))], [items])
   return <>
     <section className="page-header"><div className="eyebrow"><span>04</span>RETAIL TELEMETRY / DAY 4</div><h1>Read the pattern.</h1><p>Derived analytics use only persisted detection records. Stock-level claims are intentionally excluded.</p></section>
     {error && <ErrorNotice message={error} />}
     <section className="analytics-grid day4-analytics-grid"><article className="panel"><div className="panel-label">ANALYSES</div><div className="big-zero">{items.length}</div><p>Total stored analysis records.</p></article><article className="panel"><div className="panel-label">DETECTIONS</div><div className="big-zero">{total}</div><p>Total detections across the dataset.</p></article><article className="panel"><div className="panel-label">AVERAGE / SCAN</div><div className="big-zero">{average}</div><p>Mean detections per stored analysis.</p></article><article className="panel"><div className="panel-label">MODEL / VERSIONS</div><div className="analytics-list">{models.length ? models.map(model => <span key={model}>{model}</span>) : <span>NO DATA</span>}</div><p>Versions represented in persisted records.</p></article></section>
-    <section className="section-block"><div className="section-heading"><div><span className="panel-label">CLASS / DISTRIBUTION</span><h2>Detection mix</h2></div><span className="mono">TOP {classes.length} CLASSES</span></div><article className="panel class-chart">{classes.length ? classes.map(([name, count]) => <div className="bar-row" key={name}><div><strong>{name}</strong><span>{count}</span></div><div className="bar-track"><span style={{ width: `${count / max * 100}%` }} /></div></div>) : <EmptyPanel title="NO DETECTION DATA" text="Run an analysis to populate class distribution telemetry." />}</article></section>
+    <section className="section-block"><div className="section-heading"><div><span className="panel-label">CLASS / DISTRIBUTION</span><h2>Detection mix</h2></div><span className="mono">{loadingDetails ? 'LOADING DETAILS…' : `TOP ${classes.length} CLASSES`}</span></div><article className="panel class-chart">{classes.length ? classes.map(([name, count]) => <div className="bar-row" key={name}><div><strong>{name}</strong><span>{count}</span></div><div className="bar-track"><span style={{ width: `${count / max * 100}%` }} /></div></div>) : <EmptyPanel title={loadingDetails ? 'LOADING DETECTION DATA' : 'NO DETECTION DATA'} text={loadingDetails ? 'Loading persisted analysis details…' : 'Run an analysis to populate class distribution telemetry.'} />}</article></section>
     <section className="panel evidence-card"><div className="panel-label">EVIDENCE / BOUNDARY</div><strong>STOCK STATUS NOT CLAIMED</strong><p>The detector output is summarized as observations only. It does not estimate inventory, availability, facings, or out-of-stock state.</p></section>
   </>
 }
