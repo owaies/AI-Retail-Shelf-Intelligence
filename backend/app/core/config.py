@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     cors_origins: list[str] = [
         "http://localhost:5173",
         "https://ai-retail-shelf-intelligence.vercel.app",
+        "https://ai-retail-shelf-intelligence-owaies-projects.vercel.app",
+        "https://ai-retail-shelf-intelligence-git-main-owaies-projects.vercel.app",
     ]
     jwt_secret_key: str | None = Field(default=None, repr=False)
     jwt_algorithm: str = "HS256"
@@ -30,6 +32,8 @@ class Settings(BaseSettings):
         required = {
             "http://localhost:5173",
             "https://ai-retail-shelf-intelligence.vercel.app",
+            "https://ai-retail-shelf-intelligence-owaies-projects.vercel.app",
+            "https://ai-retail-shelf-intelligence-git-main-owaies-projects.vercel.app",
         }
         return list(dict.fromkeys([*value, *required]))
 
