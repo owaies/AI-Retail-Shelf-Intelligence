@@ -50,7 +50,7 @@ export function AnalyzePage() {
   const analyze = async () => {
     if (!file) return
     setBusy(true); setError(''); setStep(0)
-    try { setStep(1); await new Promise(r => setTimeout(r, 100)); setStep(2); const data = await api.createAnalysis(file); setStep(4); setResult(data) }
+    try { setStep(1); await new Promise(r => setTimeout(r, 100)); setStep(2); const data = await api.createAnalysis(file); setStep(5); setResult(data) }
     catch (e) { setError(e instanceof Error ? e.message : 'Analysis failed'); setStep(-1) }
     finally { setBusy(false) }
   }
@@ -61,7 +61,7 @@ export function AnalyzePage() {
       <article className="panel upload-panel">
         <div className="panel-label">INPUT / IMAGE</div>
         <input ref={inputRef} className="visually-hidden" type="file" accept="image/jpeg,image/png,image/webp" onChange={e => choose(e.target.files?.[0])} />
-        {!file ? <button className="upload-zone" type="button" onClick={() => inputRef.current?.click()}><div className="scan-icon" aria-hidden="true">⌁</div><h2>Upload shelf image</h2><p>JPEG, PNG or WebP · 10 MB maximum</p><span className="secondary-button">CHOOSE IMAGE</span></button> : <div className="image-stage"><img src={preview} alt={`Selected shelf image: ${file.name}`} /><div className="stage-meta"><span>{file.name}</span><button className="secondary-button" type="button" onClick={() => inputRef.current?.click()}>REPLACE</button></div>{result && <div className="detection-layer" aria-label="Detection overlay">{result.detections.map((d, i) => <div key={`${d.class_name}-${i}`} className="detection-box" style={{ left: `${d.box.x / result.image_width * 100}%`, top: `${d.box.y / result.image_height * 100}%`, width: `${d.box.width / result.image_width * 100}%`, height: `${d.box.height / result.image_height * 100}%` }}><span>{d.class_name} · {(d.confidence * 100).toFixed(0)}%</span></div>)}</div>}</div>}
+        {!file ? <button className="upload-zone" type="button" onClick={() => inputRef.current?.click()}><div className="scan-icon" aria-hidden="true">⌁</div><h2>Upload shelf image</h2><p>JPEG, PNG or WebP · 10 MB maximum</p><span className="secondary-button">CHOOSE IMAGE</span></button> : <div className="image-stage"><img src={preview} alt={`Selected shelf image: ${file.name}`} /><div className="stage-meta"><span>{file.name}</span><button className="secondary-button" type="button" onClick={() => inputRef.current?.click()}>REPLACE</button></div>{result && <div className="detection-layer" aria-label="Detection overlay">{result.detections.map((d, i) => <div key={`${d.class_name}-${i}`} className="detection-box" style={{ left: `${d.box.x / result.image_width * 100}%`, top: `${d.box.y / result.image_height * 100}%`, width: `${d.box.width / result.image_width * 100}%`, height: `${d.box.height / result.image_height * 100}%` }}><span>{d.class_name} · ${(d.confidence * 100).toFixed(0)}%</span></div>)}</div>}</div>}
         <button className="primary-button analyze-button" type="button" disabled={!file || busy} onClick={analyze}>{busy ? 'ANALYZING…' : result ? 'RUN AGAIN' : 'RUN ANALYSIS'} <span>↗</span></button>
       </article>
       <aside className="panel status-panel"><div className="panel-label">PIPELINE / STATUS</div><Pipeline active={step} />{result && <ResultSummary result={result} navigate={navigate} />}{!result && !busy && <div className="notice"><strong>READY</strong><p>Sign in through the Supabase login screen before running a stored analysis.</p></div>}</aside>
