@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -23,6 +23,15 @@ class Settings(BaseSettings):
     max_model_bytes: int = 80 * 1024 * 1024
     max_upload_bytes: int = 10 * 1024 * 1024
     max_request_body_bytes: int = 12 * 1024 * 1024
+
+    @field_validator("cors_origins")
+    @classmethod
+    def ensure_required_origins(cls, value: list[str]) -> list[str]:
+        required = {
+            "http://localhost:5173",
+            "https://ai-retail-shelf-intelligence.vercel.app",
+        }
+        return list(dict.fromkeys([*value, *required]))
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
