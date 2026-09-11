@@ -4,6 +4,7 @@ import { AppShell } from './components/AppShell'
 import { AnalyticsPage, AnalyzePage, DashboardPage, HistoryPage, LoginPage, SettingsPage, Day4AnalyticsPage, Day4HistoryPage } from './pages'
 import { getAccessToken } from './services/auth'
 import './styles.css'
+import './day4.css'
 
 function Protected({ children }: { children: ReactNode }) {
   return getAccessToken() ? <>{children}</> : <Navigate to="/login" replace />
