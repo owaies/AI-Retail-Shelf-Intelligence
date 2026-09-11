@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import tempfile
 import urllib.request
 from collections import Counter
@@ -31,7 +30,7 @@ RETAIL_RELEVANT_CLASSES = {
     "carrot", "hot dog", "pizza", "donut", "cake", "book", "toothbrush",
 }
 
-MODEL_NAME = "YOLOX-Tiny"
+MODEL_NAME = "YOLOX-S"
 MODEL_VERSION = "0.1.1rc0"
 
 
