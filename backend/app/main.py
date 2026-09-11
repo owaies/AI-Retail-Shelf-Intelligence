@@ -67,6 +67,7 @@ app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.max_request_body_
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
+    allow_origin_regex=r"^https://ai-retail-shelf-intelligence(?:-[a-z0-9-]+)?-owaies-projects\.vercel\.app$",
     allow_credentials=False,
     allow_methods=["GET", "POST", "DELETE"],
     allow_headers=["Accept", "Content-Type", "Authorization"],
