@@ -17,10 +17,12 @@ class Settings(BaseSettings):
     jwt_secret_key: str | None = Field(default=None, repr=False)
     jwt_algorithm: str = "HS256"
     jwt_issuer: str = "retail-shelf-intelligence"
-    model_url: str = "https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_tiny.onnx"
-    model_path: str = "/tmp/retail-shelf-intelligence/yolox_tiny.onnx"
+    # Higher-capacity official YOLOX checkpoint. Still COCO-trained, so this is
+    # an accuracy-oriented baseline upgrade, not a retail/SKU model.
+    model_url: str = "https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_s.onnx"
+    model_path: str = "/tmp/retail-shelf-intelligence/yolox_s.onnx"
     model_input_size: int = 416
-    detection_confidence: float = 0.25
+    detection_confidence: float = 0.20
     nms_iou_threshold: float = 0.45
     max_model_bytes: int = 80 * 1024 * 1024
     max_upload_bytes: int = 10 * 1024 * 1024
