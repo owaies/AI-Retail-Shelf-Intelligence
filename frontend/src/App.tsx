@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
-import { AnalyticsPage, AnalyzePage, DashboardPage, HistoryPage, LoginPage, SettingsPage, Day4AnalyticsPage, Day4HistoryPage } from './pages'
+import { AnalyzePage, DashboardPage, LoginPage, SettingsPage, Day4AnalyticsPage, Day4HistoryPage } from './pages'
 import { getAccessToken } from './services/auth'
 import './styles.css'
 import './day4.css'
