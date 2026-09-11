@@ -1,113 +1,140 @@
 # AI Retail Shelf Intelligence
 
-AI-powered shelf image analysis for retailers to turn shelf photos into structured visual intelligence such as detected objects, counts, confidence scores and evidence-bounded shelf observations.
+AI-powered shelf image analysis that turns uploaded images into structured visual observations: detected objects, counts, confidence scores, bounding boxes, persisted analysis records, and evidence-bounded telemetry.
 
-> **Project #2** in the GitHub portfolio. This repository is the single repository for the complete project.
+> **GitHub Portfolio Project #2** · One repository for the complete project.
+
+## Live Application
+
+**Frontend:** https://ai-retail-shelf-intelligence.vercel.app/
+
+**Backend:** https://ai-retail-shelf-intelligence-backen.vercel.app/
+
+**Health:** https://ai-retail-shelf-intelligence-backen.vercel.app/api/health
+
+Production deployment is on Vercel using the repository's `main` branch. The latest production deployment was verified as `READY`, and the frontend production URL returned HTTP 200.
 
 ## Current Status
 
-**Day 2 · Backend + Database + Computer Vision integration**
+**Day 5 · Testing + Polish + Deployment**
 
-The real FastAPI upload path, secure image validation, OpenCV preprocessing, local YOLOX-Tiny ONNX inference, typed detection results, analysis APIs, PostgreSQL persistence layer, JWT verification foundation and CI CV smoke test are implemented. Supabase is **not claimed as connected** because no dedicated project/database credentials have been configured for this repository.
+The project has completed the planned Day 1–4 implementation and production integration. The authenticated workflow has been manually exercised through the deployed UI, including analysis creation, persisted history, analytics, CSV export, detail inspection, and deletion confirmation.
 
-## What is implemented
+## Problem
 
-- Secure JPEG/PNG/WebP upload validation with a 10 MB limit
-- Filename treated as metadata, never as a filesystem path
-- Magic-byte validation plus OpenCV decode validation
-- Temporary-file processing with automatic cleanup
-- OpenCV letterbox preprocessing compatible with YOLOX input expectations
-- Local **YOLOX-Tiny 0.1.1rc0** ONNX Runtime inference
-- Bounding boxes, class labels and confidence scores
-- Per-class detection counts and object-coverage measurement
-- REST analysis create/list/detail/delete endpoints
-- PostgreSQL repository layer using environment-provided `DATABASE_URL`
-- Idempotent migration 002 for CV metadata and object coverage
-- JWT bearer-token verification with issuer/expiry requirements
-- User ownership enforced in analysis queries
-- Evidence-bounded shelf assessment that does **not** invent stock levels
-- Backend tests for upload validation, API auth and OpenCV preprocessing
-- Real CV integration test against the pinned YOLOX repository sample image
-- GitHub Actions backend tests + FastAPI startup smoke check + frontend build
+Retail teams can collect large numbers of shelf photographs, but raw images are difficult to search, compare, and summarize. A useful prototype should turn each image into structured computer-vision evidence while avoiding unsupported claims about inventory or out-of-stock state.
 
-## What is deliberately not claimed
+## Solution
 
-- SKU-level product recognition
-- Brand recognition
-- Shelf-specific object detection accuracy
-- Empty-shelf or low-stock classification
-- Supabase connectivity
-- Supabase Storage
-- Production authentication issuer configuration
-- Production deployment
+The application provides an authenticated workspace where a user can upload a shelf image, run OpenCV preprocessing and YOLOX-Tiny inference, review bounding-box detections, persist the result in PostgreSQL/Supabase, browse historical analyses, inspect individual records, export telemetry as CSV, and review aggregate class-level analytics.
 
-The selected pretrained YOLOX model is trained for the COCO object categories. It can detect generic categories such as bottles, cups, bowls and food items, but that is not equivalent to recognizing individual retail SKUs. Stock-state inference is therefore marked **unknown** until a shelf-specific model/region method is validated.
+The current detector is a general-purpose COCO model. Therefore, the application deliberately reports **observable object categories**, not SKU identity or stock status.
+
+## Features
+
+### Analysis workflow
+
+- Authenticated login using Supabase Auth
+- JPEG, PNG and WebP validation
+- 10 MB upload limit
+- Magic-byte and OpenCV decode validation
+- Secure temporary-file processing
+- OpenCV letterbox preprocessing at 416×416
+- YOLOX-Tiny ONNX Runtime inference
+- Bounding boxes, class names and confidence scores
+- Per-class counts and object coverage
+- Evidence-bounded shelf assessment
+- Persistent analysis and detection records
+
+### Day 4 History intelligence
+
+- Search analysis history by filename
+- Filter by model
+- Sort by newest, oldest, or detection count
+- Responsive history table
+- Open a persisted analysis detail view
+- Detection-level coordinates and confidence inspection
+- Model/version and image metadata
+- Authenticated deletion with confirmation
+- CSV export of filtered history
+- Empty, loading and request-error states
+
+### Day 4 Analytics
+
+- Total stored analyses
+- Total detections
+- Average detections per scan
+- Model/version telemetry
+- Aggregated class distribution
+- Top detected classes visualization
+- CSV export of class distribution
+- Explicit evidence boundary preventing unsupported stock claims
+
+## Technology Stack
+
+| Layer | Technology | Why |
+|---|---|---|
+| Frontend | React + TypeScript + Vite | Fast, typed single-page application |
+| Styling | CSS | Responsive product UI without unnecessary dependency weight |
+| Routing | React Router | Protected application pages and detail URLs |
+| Backend | Python + FastAPI | Typed REST API and clean service boundary |
+| Computer Vision | OpenCV | Image decoding and YOLOX-compatible preprocessing |
+| Object Detection | YOLOX-Tiny 0.1.1rc0 | Lightweight general-purpose detector |
+| Inference | ONNX Runtime | Local CPU inference without a paid inference API |
+| Database | PostgreSQL via Supabase | Relational persistence for users, analyses and detections |
+| Authentication | Supabase Auth + bearer JWT | Authenticated frontend sessions and API authorization |
+| CI | GitHub Actions | Backend tests, CV smoke test, API startup check and frontend build |
+| Deployment | Vercel | Free-tier-friendly production hosting |
 
 ## Architecture
 
 ```text
-Client
-  │
-  │ multipart/form-data
-  ▼
-FastAPI /api/analyses
-  │
-  ├── JWT verification
-  ├── upload validation
-  ├── secure temporary file
-  ▼
-OpenCV ImageProcessor
-  │
-  │ letterbox 416×416
-  ▼
-YOLOX-Tiny ONNX Runtime
-  │
-  ├── boxes
-  ├── classes
-  └── confidences
-  ▼
-ShelfAnalyzer
-  │
-  └── evidence-bounded object coverage
-  ▼
-PostgreSQL repository
-  │
-  ├── users
-  ├── analyses
-  ├── detections
-  └── shelf_regions
+                    ┌──────────────────────────┐
+                    │      React + Vite         │
+                    │  Login / Analyze /        │
+                    │  History / Analytics      │
+                    └────────────┬─────────────┘
+                                 │
+                       Bearer JWT + multipart
+                                 │
+                                 ▼
+                    ┌──────────────────────────┐
+                    │        FastAPI            │
+                    │ /api/analyses             │
+                    │ auth + validation         │
+                    └────────────┬─────────────┘
+                                 │
+                                 ▼
+                    ┌──────────────────────────┐
+                    │          OpenCV            │
+                    │ decode + letterbox 416²  │
+                    └────────────┬─────────────┘
+                                 │
+                                 ▼
+                    ┌──────────────────────────┐
+                    │   YOLOX-Tiny / ONNX      │
+                    │ boxes + classes + scores │
+                    └────────────┬─────────────┘
+                                 │
+                                 ▼
+                    ┌──────────────────────────┐
+                    │      Shelf Analyzer       │
+                    │ counts + object coverage │
+                    │ evidence-bounded output  │
+                    └────────────┬─────────────┘
+                                 │
+                                 ▼
+                    ┌──────────────────────────┐
+                    │ PostgreSQL / Supabase     │
+                    │ users → analyses          │
+                    │ analyses → detections     │
+                    │          → shelf_regions  │
+                    └──────────────────────────┘
 ```
 
-See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for the backend request lifecycle and model boundaries.
 
-## Model strategy
-
-### Selected model
-
-**YOLOX-Tiny 0.1.1rc0**, executed locally through ONNX Runtime.
-
-The official YOLOX documentation lists YOLOX-Tiny at 416×416, 5.06M parameters, 6.45 GFLOPs and 32.8 mAP on its benchmark table. The official ONNX Runtime documentation provides a pre-generated `yolox_tiny.onnx` release asset and shows the corresponding inference flow. YOLOX source is released under **Apache License 2.0**.
-
-Sources:
-
-- https://github.com/Megvii-BaseDetection/YOLOX
-- https://github.com/Megvii-BaseDetection/YOLOX/blob/main/LICENSE
-- https://github.com/Megvii-BaseDetection/YOLOX/blob/main/demo/ONNXRuntime/README.md
-
-The model is downloaded on demand from the pinned official GitHub release URL and is not committed to this repository.
-
-### Retail suitability limitation
-
-YOLOX-Tiny's pretrained detector uses COCO classes, not retail SKU labels. The application therefore exposes **detected object categories** rather than pretending that a generic `bottle` detection is a particular brand or product. A future shelf-specific model can replace the detector behind the same service boundary.
-
-## Database
-
-Migration files:
-
-- `backend/migrations/001_initial_schema.sql`
-- `backend/migrations/002_analysis_cv_metadata.sql`
-
-Relationships:
+## Data Model
 
 ```text
 users
@@ -118,18 +145,48 @@ users
           └──< shelf_regions
 ```
 
-`analyses.user_id` owns each analysis. Retrieval and deletion are filtered by the authenticated user ID. Foreign keys cascade child records when an owned analysis is deleted.
+Each analysis belongs to an authenticated user. API reads and deletes are scoped by both analysis ID and authenticated user ID. Child records are related through foreign keys.
 
-### Supabase status
+## Supabase
 
-**Not connected/verified for this project.** The repository supports PostgreSQL/Supabase-compatible PostgreSQL through `DATABASE_URL`, but no credentials are stored and no new Supabase project was created during Day 2.
+The project uses the existing Supabase project configured for this application. Production authentication and persisted analysis records have been verified through the deployed application.
 
-Apply migrations only after configuring a real database connection:
+Schema:
 
-```bash
-cd backend
-python scripts/apply_migrations.py
+```text
+retail_shelf_intelligence
 ```
+
+Tables:
+
+- `users`
+- `analyses`
+- `detections`
+- `shelf_regions`
+
+No service-role key is exposed in the frontend. Client configuration uses the Supabase URL and publishable key, while server-only database/auth configuration remains in deployment environment variables.
+
+## Model Strategy
+
+**YOLOX-Tiny 0.1.1rc0** is executed locally through ONNX Runtime.
+
+- Input: 416×416
+- Runtime: ONNX Runtime CPU
+- Pretrained labels: COCO
+- Model source: Megvii YOLOX
+- License: Apache-2.0
+
+Official references:
+
+- https://github.com/Megvii-BaseDetection/YOLOX
+- https://github.com/Megvii-BaseDetection/YOLOX/blob/main/LICENSE
+- https://github.com/Megvii-BaseDetection/YOLOX/blob/main/demo/ONNXRuntime/README.md
+
+The model is downloaded on demand from the pinned official release and is not committed to the repository.
+
+### Important limitation
+
+COCO labels are generic object categories. A `bottle` detection does not identify a particular retail SKU, brand, facing count, or inventory state. The UI therefore labels stock-state inference as **not claimed** rather than presenting an unsupported prediction.
 
 ## API
 
@@ -143,62 +200,51 @@ GET /api/health
 
 ```http
 POST /api/analyses
-Authorization: Bearer <trusted-jwt>
+Authorization: Bearer <access-token>
 Content-Type: multipart/form-data
-```
-
-Form field:
-
-```text
-file=<shelf image>
 ```
 
 ### List analyses
 
 ```http
 GET /api/analyses
-Authorization: Bearer <trusted-jwt>
+Authorization: Bearer <access-token>
 ```
 
-### Get one analysis
+### Get analysis
 
 ```http
 GET /api/analyses/{analysis_id}
-Authorization: Bearer <trusted-jwt>
+Authorization: Bearer <access-token>
 ```
 
-### Delete one analysis
+### Delete analysis
 
 ```http
 DELETE /api/analyses/{analysis_id}
-Authorization: Bearer <trusted-jwt>
+Authorization: Bearer <access-token>
 ```
-
-Analysis endpoints return `401` without authentication and `503` when the required database configuration is absent.
 
 ## Security
 
-- Allowed MIME types: JPEG, PNG and WebP
-- Allowed extensions: `.jpg`, `.jpeg`, `.png`, `.webp`
-- Maximum upload: 10 MB
-- File signatures are checked against the declared MIME type
-- OpenCV must successfully decode the uploaded content
-- Uploaded filenames are never used as storage paths
-- Temporary files are generated by the operating system and deleted after processing
-- JWT requires `sub`, `exp` and `iss`
-- JWT issuer and secret are environment-configured
-- Database queries always scope analysis access to the authenticated user ID
-- No API keys, database credentials or service-role keys are committed
-- No paid inference API is used
+- Allowed upload types: JPEG, PNG and WebP
+- Maximum upload size: 10 MB
+- MIME type, extension, magic bytes and OpenCV decode are validated
+- Client filenames are metadata only and never treated as filesystem paths
+- Temporary files are cleaned after processing
+- JWT validation requires the expected user claims and issuer/expiry checks
+- Analysis queries are scoped to the authenticated user
+- No API keys, database passwords or service-role credentials are committed
+- No paid inference API is required
 
-## Local development
+## Local Development
 
 ### Backend
 
 ```bash
 cd backend
 python -m venv .venv
-# Windows: .venv\Scripts\activate
+# Windows: .venv\\Scripts\\activate
 # macOS/Linux: source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --reload
@@ -216,7 +262,7 @@ Tests:
 pytest
 ```
 
-The real model integration test downloads the pinned YOLOX sample/model when `RUN_CV_INTEGRATION=1`.
+The CV integration test can run the pinned YOLOX model/sample with `RUN_CV_INTEGRATION=1`.
 
 ### Frontend
 
@@ -232,70 +278,79 @@ Production build:
 npm run build
 ```
 
-## Environment variables
+## Environment Variables
 
-Copy `.env.example` to `.env` and supply real values only in the local/host environment.
+Copy `.env.example` to `.env` for local development and provide real values only through local/deployment environment configuration.
 
-Required for persistent analysis APIs:
-
-```text
-DATABASE_URL=postgresql://USER:PASSWORD@HOST:5432/DATABASE
-```
-
-Required for authenticated API access:
+Frontend:
 
 ```text
-JWT_SECRET_KEY=replace-with-a-long-random-secret
-JWT_ISSUER=retail-shelf-intelligence
-JWT_ALGORITHM=HS256
+VITE_API_BASE_URL=<backend API URL>
+VITE_SUPABASE_URL=<Supabase project URL>
+VITE_SUPABASE_PUBLISHABLE_KEY=<Supabase publishable key>
 ```
 
-CV configuration:
+Backend configuration includes the PostgreSQL connection and JWT/model settings. Never commit those real values.
 
-```text
-MODEL_URL=https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_tiny.onnx
-MODEL_PATH=.cache/models/yolox_tiny.onnx
-MODEL_INPUT_SIZE=416
-DETECTION_CONFIDENCE=0.25
-NMS_IOU_THRESHOLD=0.45
-```
+## CI / Verification
 
-## CI
-
-GitHub Actions verifies:
+GitHub Actions runs on pushes and pull requests to `main` and verifies:
 
 1. Python 3.12 dependency installation
 2. Backend pytest suite
-3. Real YOLOX inference against the pinned official YOLOX sample when CI runs with the integration flag
-4. FastAPI startup and `/api/health`
+3. Pinned YOLOX CV integration path
+4. FastAPI startup and `/api/health` smoke check
 5. Node 22 dependency installation
 6. Frontend production build
 
-## Day plan
+The CI run for commit `5ea3fe7649dd1196a740d05a89cb009b6c829ec3` completed successfully.
+
+Production verification completed for the current deployment:
+
+- Vercel deployment state: `READY`
+- Frontend production response: HTTP 200
+- Backend production health: HTTP 200
+- Backend production runtime error scan: no error/fatal logs in the checked two-hour window
+- Authenticated application flow: manually exercised
+- History CSV export: manually verified
+- Analytics class distribution and CSV export: manually verified
+- Delete confirmation flow: manually verified
+
+## Day-by-Day Progress
 
 ### Day 1 · Foundation
 
-Completed: architecture, frontend shell, FastAPI boundary, CV interfaces, database schema, environment strategy, documentation and CI.
+Architecture, repository structure, frontend shell, FastAPI boundary, CV interfaces, database design, environment strategy and CI foundation.
 
 ### Day 2 · Backend + Database + Vision
 
-Completed: secure upload validation, OpenCV preprocessing, YOLOX ONNX inference, detection contracts, analysis APIs, PostgreSQL persistence layer, JWT verification foundation and real CI inference test.
+Secure upload validation, OpenCV preprocessing, YOLOX-Tiny ONNX inference, detection contracts, analysis APIs, PostgreSQL persistence, JWT verification foundation and CV integration testing.
 
 ### Day 3 · Frontend + Integration
 
-Planned: connect the existing frontend to the real analysis API, upload workflow, analysis result visualization, bounding-box overlays, detection summaries, history and responsive result states.
+Real authenticated frontend-to-API workflow, upload analysis, OpenCV/YOLO pipeline states, result visualization, bounding boxes, persistence, History and Analytics integration.
 
 ### Day 4 · Intelligence + UX
 
-Planned: validated shelf-region reasoning, stock/empty-area intelligence where supported by suitable visual evidence, analytics, storage and UX/security refinement.
+History search/filter/sort, persisted detail inspection, deletion, CSV export, aggregate detection analytics, responsive UX refinements and explicit evidence boundaries.
 
 ### Day 5 · Testing + Polish + Deployment
 
-Planned only if needed: end-to-end verification, edge cases, production configuration and free-tier deployment.
+CI verification, production Vercel deployment, backend health/runtime verification, production frontend verification and authenticated end-to-end UI evidence.
 
-## Cost policy
+## Future Scope
 
-Strictly free/no-cost development. No paid plans, billing upgrades, paid APIs, paid AI APIs or paid inference services are enabled.
+- Fine-tune a shelf-specific detector for retail SKUs
+- Add validated shelf-region segmentation
+- Introduce calibrated stock/availability estimation only after suitable labeled data
+- Add pagination/server-side aggregation for larger datasets
+- Add role-based retail/team workspaces
+- Add richer comparison and trend analytics
+- Add object-level visual audit overlays and exportable reports
+
+## Cost Policy
+
+The project is designed around free-tier tooling: GitHub, Supabase and Vercel. No paid domain, paid hosting plan or paid AI inference API is required.
 
 ## Author
 
