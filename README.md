@@ -39,7 +39,7 @@ The detector is currently a general-purpose COCO model. Therefore, the applicati
 - 10 MB upload limit
 - Magic-byte and OpenCV decode validation
 - Secure temporary-file processing
-- OpenCV letterbox preprocessing at 416×416
+- OpenCV letterbox preprocessing at 640×640 for the current YOLOX-S checkpoint
 - YOLOX-S ONNX Runtime inference
 - Bounding boxes, class names and confidence scores
 - Per-class counts and object coverage
@@ -72,7 +72,7 @@ The detector is currently a general-purpose COCO model. Therefore, the applicati
 
 ### Vision quality upgrade
 
-The original YOLOX-Tiny baseline was replaced with the higher-capacity official **YOLOX-S** checkpoint and a recall-oriented 0.20 confidence threshold. This is an engineering baseline improvement, not a measured accuracy claim. Precision, recall and mAP must be evaluated on a representative labeled retail test set before reporting model performance.
+The original YOLOX-Tiny baseline was replaced with the higher-capacity official **YOLOX-S** checkpoint and a recall-oriented 0.20 confidence threshold. The official YOLOX-S ONNX asset uses a fixed 640×640 input, so preprocessing now matches the checkpoint's native dimensions. This is an engineering baseline improvement, not a measured accuracy claim. Precision, recall and mAP must be evaluated on a representative labeled retail test set before reporting model performance.
 
 ## Technology Stack
 
@@ -111,7 +111,7 @@ The original YOLOX-Tiny baseline was replaced with the higher-capacity official 
                                  ▼
                     ┌──────────────────────────┐
                     │          OpenCV            │
-                    │ decode + letterbox 416²  │
+                    │ decode + letterbox 640²  │
                     └────────────┬─────────────┘
                                  │
                                  ▼
@@ -140,7 +140,7 @@ The original YOLOX-Tiny baseline was replaced with the higher-capacity official 
 
 **YOLOX-S 0.1.1rc0** is executed locally through ONNX Runtime.
 
-- Input: 416×416
+- Input: 640×640
 - Runtime: ONNX Runtime CPU
 - Pretrained labels: COCO
 - Model source: Megvii YOLOX
@@ -148,7 +148,7 @@ The original YOLOX-Tiny baseline was replaced with the higher-capacity official 
 - Confidence threshold: 0.20
 - NMS IoU threshold: 0.45
 
-The model is downloaded on demand from the official release and is not committed to the repository.
+The model is downloaded on demand from the official release and is not committed to the repository. The official YOLOX release contains the `yolox_s.onnx` asset at approximately 35.9 MB. fileciteturn177file0
 
 ### Important limitation
 
