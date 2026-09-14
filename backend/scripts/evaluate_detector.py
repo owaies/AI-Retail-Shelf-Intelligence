@@ -12,9 +12,11 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
 
 def load_ground_truth(label_path: Path, width: int, height: int) -> list[GroundTruth]:
     if not label_path.exists():
-        return []
+        raise ValueError(f"Missing label file for image: {label_path.name}")
     truths: list[GroundTruth] = []
     for line_number, line in enumerate(label_path.read_text().splitlines(), start=1):
+        if not line.strip():
+            continue
         fields = line.split()
         if len(fields) != 5:
             raise ValueError(f"{label_path}:{line_number}: expected class_id x_center y_center width height")
@@ -22,13 +24,16 @@ def load_ground_truth(label_path: Path, width: int, height: int) -> list[GroundT
         class_index = int(class_id)
         if not 0 <= class_index < len(COCO_CLASSES):
             raise ValueError(f"{label_path}:{line_number}: invalid COCO class id {class_index}")
-        box_width_px = float(box_width) * width
-        box_height_px = float(box_height) * height
+        values = [float(x_center), float(y_center), float(box_width), float(box_height)]
+        if any(value < 0 or value > 1 for value in values):
+            raise ValueError(f"{label_path}:{line_number}: YOLO coordinates must be normalized to [0, 1]")
+        box_width_px = values[2] * width
+        box_height_px = values[3] * height
         truths.append(GroundTruth(
             class_name=COCO_CLASSES[class_index],
             box=BoundingBox(
-                x=float(x_center) * width - box_width_px / 2,
-                y=float(y_center) * height - box_height_px / 2,
+                x=values[0] * width - box_width_px / 2,
+                y=values[1] * height - box_height_px / 2,
                 width=box_width_px,
                 height=box_height_px,
             ),
@@ -42,6 +47,8 @@ def main() -> None:
     parser.add_argument("--iou", type=float, default=0.50, help="IoU threshold for matching (default: 0.50)")
     parser.add_argument("--output", type=Path, help="Optional JSON output path")
     args = parser.parse_args()
+    if not 0 < args.iou <= 1:
+        raise SystemExit("--iou must be greater than 0 and at most 1")
 
     image_dir = args.dataset / "images"
     label_dir = args.dataset / "labels"
@@ -62,7 +69,7 @@ def main() -> None:
         raise SystemExit("No supported images found in dataset/images")
 
     metrics = evaluate_dataset(samples, iou_threshold=args.iou)
-    report = {"iou_threshold": args.iou, **metrics.__dict__}
+    report = {"iou_threshold": args.iou, "model": "YOLOX-S", "model_version": "0.1.1rc0", **metrics.__dict__}
     print(json.dumps(report, indent=2))
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
