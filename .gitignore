@@ -15,3 +15,10 @@ __pycache__/
 frontend/.vite/
 backend/uploads/
 backend/tmp/
+backend/.venv/
+benchmark/
+*.onnx
+*.pth
+*.pt
+*.zip
+*.tar.gz

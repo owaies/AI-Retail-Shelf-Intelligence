@@ -1,5 +1,22 @@
-from app.services.evaluation import GroundTruth, evaluate_dataset, iou
-from app.services.vision import BoundingBox, DetectionResult
+from pathlib import Path
+import pytest
+
+from app.services.evaluation import (
+    DatasetVocabulary,
+    EvaluationMetrics,
+    GroundTruth,
+    VocabularyMismatchError,
+    evaluate_dataset,
+    evaluate_image,
+    iou,
+)
+from app.services.vision import BoundingBox, COCO_CLASSES, DetectionResult
+from scripts.evaluate_detector import (
+    find_data_yaml,
+    load_ground_truth,
+    resolve_dataset_directories,
+    run_evaluation,
+)
 
 
 def box(x=0, y=0, width=10, height=10):
@@ -45,3 +62,97 @@ def test_wrong_class_is_false_positive_and_missed_ground_truth():
     assert metrics.recall == 0.0
     assert metrics.f1 == 0.0
     assert metrics.ap50 == 0.0
+
+
+def test_class_agnostic_evaluation_matches_overlapping_boxes_regardless_of_class():
+    samples = [
+        (
+            [prediction("cup", confidence=0.95)],
+            [GroundTruth("bottle", box())],
+        )
+    ]
+    metrics = evaluate_dataset(samples, class_agnostic=True)
+    assert metrics.true_positives == 1
+    assert metrics.false_positives == 0
+    assert metrics.false_negatives == 0
+    assert metrics.precision == 1.0
+    assert metrics.recall == 1.0
+    assert metrics.f1 == 1.0
+    assert metrics.ap50 == 1.0
+
+
+def test_dataset_vocabulary_from_yaml_list(tmp_path: Path):
+    yaml_file = tmp_path / "data.yaml"
+    yaml_file.write_text("nc: 3\nnames: ['cola', 'chips', 'water']\n")
+    vocab = DatasetVocabulary.from_yaml(yaml_file)
+    assert vocab.nc == 3
+    assert vocab.names == ("cola", "chips", "water")
+
+
+def test_dataset_vocabulary_from_yaml_dict(tmp_path: Path):
+    yaml_file = tmp_path / "data.yaml"
+    yaml_file.write_text("nc: 2\nnames:\n  0: cola\n  1: water\n")
+    vocab = DatasetVocabulary.from_yaml(yaml_file)
+    assert vocab.nc == 2
+    assert vocab.names == ("cola", "water")
+
+
+def test_dataset_vocabulary_nc_mismatch_raises(tmp_path: Path):
+    yaml_file = tmp_path / "data.yaml"
+    yaml_file.write_text("nc: 5\nnames: ['cola', 'water']\n")
+    with pytest.raises(ValueError, match="declares nc=5 but defines 2"):
+        DatasetVocabulary.from_yaml(yaml_file)
+
+
+def test_vocabulary_compatibility_detection():
+    coco_vocab = DatasetVocabulary.coco()
+    custom_vocab = DatasetVocabulary(names=("BargsBlack20Oz", "BuenoShareSize"))
+
+    assert coco_vocab.is_compatible_with(DatasetVocabulary.coco()) is True
+    assert coco_vocab.is_compatible_with(custom_vocab) is False
+    mismatch_desc = coco_vocab.describe_mismatch(custom_vocab)
+    assert "Expected (80 classes)" in mismatch_desc
+    assert "Provided (2 classes)" in mismatch_desc
+
+
+def test_load_ground_truth_with_valid_and_invalid_classes(tmp_path: Path):
+    label_file = tmp_path / "sample.txt"
+    label_file.write_text("0 0.5 0.5 0.2 0.4\n1 0.3 0.3 0.1 0.1\n")
+    vocab = ("item_a", "item_b")
+
+    truths = load_ground_truth(label_file, width=100, height=200, vocabulary=vocab)
+    assert len(truths) == 2
+    assert truths[0].class_name == "item_a"
+    assert truths[1].class_name == "item_b"
+
+    # Out of range class index raises ValueError
+    label_file_bad = tmp_path / "bad.txt"
+    label_file_bad.write_text("99 0.5 0.5 0.2 0.4\n")
+    with pytest.raises(ValueError, match="invalid class id 99"):
+        load_ground_truth(label_file_bad, width=100, height=200, vocabulary=vocab)
+
+
+def test_run_evaluation_rejects_sku_vocabulary_mismatch_without_silent_coco_conversion(tmp_path: Path):
+    # Setup mock retail dataset with data.yaml (62 SKU classes)
+    dataset_dir = tmp_path / "retail"
+    images_dir = dataset_dir / "images"
+    labels_dir = dataset_dir / "labels"
+    images_dir.mkdir(parents=True)
+    labels_dir.mkdir(parents=True)
+
+    yaml_file = dataset_dir / "data.yaml"
+    yaml_file.write_text("nc: 2\nnames: ['BargsBlack20Oz', 'BuenoShareSize']\n")
+
+    # Image + label
+    img_file = images_dir / "shelf.jpg"
+    import numpy as np
+    import cv2
+    dummy_img = np.zeros((100, 100, 3), dtype=np.uint8)
+    cv2.imwrite(str(img_file), dummy_img)
+
+    lbl_file = labels_dir / "shelf.txt"
+    lbl_file.write_text("0 0.5 0.5 0.2 0.2\n")
+
+    # Direct evaluation MUST raise VocabularyMismatchError
+    with pytest.raises(VocabularyMismatchError, match="Class vocabulary mismatch"):
+        run_evaluation(dataset_dir)

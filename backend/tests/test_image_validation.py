@@ -21,6 +21,7 @@ def test_valid_jpeg_upload() -> None:
         ("shelf.jpg", "image/jpeg", b"not-an-image"),
         ("shelf.jpg", "image/jpeg", b"x" * (10 * 1024 * 1024 + 1)),
     ],
+    ids=["invalid_extension", "invalid_content_type", "signature_mismatch", "corrupt_data", "oversized_payload"],
 )
 def test_invalid_uploads_are_rejected(filename: str, content_type: str, data: bytes) -> None:
     with pytest.raises(ValueError):

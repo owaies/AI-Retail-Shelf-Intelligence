@@ -1,8 +1,69 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Sequence
 
-from app.services.vision import BoundingBox, DetectionResult
+import yaml
+
+from app.services.vision import BoundingBox, COCO_CLASSES, DetectionResult
+
+
+class VocabularyMismatchError(ValueError):
+    """Raised when evaluation is attempted between incompatible class vocabularies."""
+    pass
+
+
+@dataclass(frozen=True)
+class DatasetVocabulary:
+    """Represents the set and ordering of class names for a dataset or model."""
+    names: tuple[str, ...]
+
+    @property
+    def nc(self) -> int:
+        return len(self.names)
+
+    @classmethod
+    def coco(cls) -> DatasetVocabulary:
+        return cls(names=COCO_CLASSES)
+
+    @classmethod
+    def from_yaml(cls, yaml_path: Path | str) -> DatasetVocabulary:
+        path = Path(yaml_path)
+        if not path.exists():
+            raise FileNotFoundError(f"Vocabulary YAML file not found: {path}")
+        with path.open("r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        if not isinstance(data, dict):
+            raise ValueError(f"Invalid YAML format in {path}: expected a dictionary mapping")
+        names_entry = data.get("names")
+        if isinstance(names_entry, list):
+            names = tuple(str(n) for n in names_entry)
+        elif isinstance(names_entry, dict):
+            # Formats like {0: 'classA', 1: 'classB'}
+            sorted_indices = sorted(int(k) for k in names_entry.keys())
+            names = tuple(str(names_entry[i]) for i in sorted_indices)
+        else:
+            raise ValueError(f"YAML at {path} missing valid 'names' list or dict")
+        expected_nc = data.get("nc")
+        if expected_nc is not None and int(expected_nc) != len(names):
+            raise ValueError(
+                f"YAML at {path} declares nc={expected_nc} but defines {len(names)} class names"
+            )
+        return cls(names=names)
+
+    def is_compatible_with(self, other: DatasetVocabulary | Sequence[str]) -> bool:
+        other_names = other.names if isinstance(other, DatasetVocabulary) else tuple(other)
+        return self.names == other_names
+
+    def describe_mismatch(self, other: DatasetVocabulary | Sequence[str]) -> str:
+        other_names = other.names if isinstance(other, DatasetVocabulary) else tuple(other)
+        return (
+            f"Class vocabulary mismatch:\n"
+            f"  Expected ({len(self.names)} classes): {list(self.names[:5])}{'...' if len(self.names) > 5 else ''}\n"
+            f"  Provided ({len(other_names)} classes): {list(other_names[:5])}{'...' if len(other_names) > 5 else ''}\n"
+            f"Direct SKU evaluation with an incompatible class vocabulary is invalid."
+        )
 
 
 @dataclass(frozen=True)
@@ -50,6 +111,7 @@ def evaluate_image(
     predictions: list[DetectionResult],
     ground_truths: list[GroundTruth],
     iou_threshold: float = 0.5,
+    class_agnostic: bool = False,
 ) -> tuple[int, int, int]:
     """Return TP, FP, FN using confidence-ranked greedy one-to-one matching."""
     matched: set[int] = set()
@@ -58,7 +120,7 @@ def evaluate_image(
         candidates = [
             (index, iou(prediction.box, truth.box))
             for index, truth in enumerate(ground_truths)
-            if index not in matched and truth.class_name == prediction.class_name
+            if index not in matched and (class_agnostic or truth.class_name == prediction.class_name)
         ]
         if candidates:
             best_index, best_iou = max(candidates, key=lambda item: item[1])
@@ -71,12 +133,13 @@ def evaluate_image(
 def evaluate_dataset(
     samples: list[tuple[list[DetectionResult], list[GroundTruth]]],
     iou_threshold: float = 0.5,
+    class_agnostic: bool = False,
 ) -> EvaluationMetrics:
     """Evaluate a labeled dataset at one IoU threshold.
 
-    AP50 is computed globally by ranking all predictions by confidence and
-    greedily matching them to the highest-IoU unmatched ground truth of the
-    same class in each image.
+    When class_agnostic is True, bounding boxes are matched based purely on IoU
+    overlap to measure localization/objectness recall without requiring class equality.
+    When class_agnostic is False, boxes only match if class_name is identical.
     """
     true_positives = false_positives = false_negatives = 0
     ranked: list[tuple[float, bool]] = []
@@ -87,7 +150,7 @@ def evaluate_dataset(
             candidates = [
                 (index, iou(prediction.box, truth.box))
                 for index, truth in enumerate(ground_truths)
-                if index not in matched and truth.class_name == prediction.class_name
+                if index not in matched and (class_agnostic or truth.class_name == prediction.class_name)
             ]
             is_match = bool(candidates) and max(candidates, key=lambda item: item[1])[1] >= iou_threshold
             if is_match:
