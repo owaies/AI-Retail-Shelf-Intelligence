@@ -56,6 +56,32 @@ def resolve_dataset_directories(
     )
 
 
+def parse_yolo_label_line(line: str, width: int = 1, height: int = 1) -> tuple[float, float, float, float, int] | None:
+    parts = line.strip().split()
+    if not parts:
+        return None
+    cls_id = int(parts[0])
+    nums = [float(p) for p in parts[1:]]
+
+    if len(nums) == 4:
+        xc, yc, w, h = nums
+        x1 = (xc - w / 2) * width
+        y1 = (yc - h / 2) * height
+        x2 = (xc + w / 2) * width
+        y2 = (yc + h / 2) * height
+    elif len(nums) >= 6 and len(nums) % 2 == 0:
+        xs = nums[0::2]
+        ys = nums[1::2]
+        x1 = min(xs) * width
+        x2 = max(xs) * width
+        y1 = min(ys) * height
+        y2 = max(ys) * height
+    else:
+        return None
+
+    return (x1, y1, x2, y2, cls_id)
+
+
 def load_ground_truth(
     label_path: Path, width: int, height: int, vocabulary: Sequence[str]
 ) -> list[GroundTruth]:
@@ -65,36 +91,29 @@ def load_ground_truth(
     for line_number, line in enumerate(label_path.read_text().splitlines(), start=1):
         if not line.strip():
             continue
-        fields = line.split()
-        if len(fields) != 5:
-            raise ValueError(
-                f"{label_path}:{line_number}: expected class_id x_center y_center width height"
-            )
-        class_id, x_center, y_center, box_width, box_height = fields
-        class_index = int(class_id)
+        parsed = parse_yolo_label_line(line, width, height)
+        if parsed is None:
+            raise ValueError(f"{label_path}:{line_number}: expected YOLO box or polygon format")
+        x1, y1, x2, y2, class_index = parsed
         if not 0 <= class_index < len(vocabulary):
             raise ValueError(
                 f"{label_path}:{line_number}: invalid class id {class_index} for vocabulary of size {len(vocabulary)}"
             )
-        values = [float(x_center), float(y_center), float(box_width), float(box_height)]
-        if any(value < 0 or value > 1 for value in values):
-            raise ValueError(
-                f"{label_path}:{line_number}: YOLO coordinates must be normalized to [0, 1]"
-            )
-        box_width_px = values[2] * width
-        box_height_px = values[3] * height
+        box_width = max(0.0, x2 - x1)
+        box_height = max(0.0, y2 - y1)
         truths.append(
             GroundTruth(
                 class_name=vocabulary[class_index],
                 box=BoundingBox(
-                    x=values[0] * width - box_width_px / 2,
-                    y=values[1] * height - box_height_px / 2,
-                    width=box_width_px,
-                    height=box_height_px,
+                    x=x1,
+                    y=y1,
+                    width=box_width,
+                    height=box_height,
                 ),
             )
         )
     return truths
+
 
 
 def run_evaluation(

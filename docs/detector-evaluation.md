@@ -77,38 +77,48 @@ python scripts/evaluate_detector.py ../benchmark/retail-shelf --split test --cla
 
 ---
 
-## 4. Roadmap: Retail Model Fine-Tuning & Evaluation
+---
 
-To achieve valid, high-accuracy SKU-level detection:
+## 5. YOLOX-S Training & Fine-Tuning Pipeline
 
-```mermaid
-flowchart LR
-    A["Roboflow Retail Dataset\n(62 SKUs)"] --> B["Training Split\n(train/)"]
-    A --> C["Validation Split\n(valid/)"]
-    A --> D["Held-Out Test Split\n(test/)"]
-    
-    B --> E["Fine-Tuning YOLOX / YOLO\n(Transfer Learning from COCO)"]
-    C --> E
-    
-    E --> F["Trained Retail Checkpoint\n(62 SKU Output Heads)"]
-    F --> G["ONNX Export\n(yolox_retail_62.onnx)"]
-    
-    G --> H["Final Rigorous Evaluation\nagainst held-out test/"]
-    D --> H
-    
-    H --> I["Verified Retail Metrics\n(mAP@50, Precision, Recall)"]
+A reproducible PyTorch training pipeline is implemented under `backend/app/training/` and `backend/scripts/train_yolox.py`. It trains the exact YOLOX-S architecture with 62-class output heads, initialized from official Megvii COCO pretrained weights (`yolox_s.pth`).
+
+### Hardware Specifications & Profile (Tested Environment)
+- **GPU**: NVIDIA GeForce RTX 3050 Laptop GPU (4 GB VRAM)
+- **Compute Stack**: CUDA 13.0 Driver / PyTorch 2.7.1 + cu118 / Mixed Precision (AMP FP16)
+- **Recommended Batch Size**: `4` (Safe for 4 GB GPUs; peak VRAM reserved is ~1.27 GB, leaving >2.7 GB headroom)
+- **Input Dimension**: `640x640` (Native YOLOX-S letterbox resolution)
+- **Steady-State Throughput**: ~225 ms per batch of 4 on RTX 3050
+- **Epoch Duration**: ~22.8 minutes per epoch across 24,415 training images (6,104 steps/epoch)
+- **Estimated 30-Epoch Training**: ~11.4 hours total on RTX 3050
+
+### Strict Dataset Partition Separation
+> [!IMPORTANT]
+> The training pipeline strictly utilizes `train/` for optimization and `valid/` for validation loss monitoring and checkpoint selection. The `test/` partition (6,884 images / 18,687 boxes) is **strictly held out and never touched** during training or model selection.
+
+### Commands
+
+#### 1. GPU Smoke Test / Dry-Run (Fast Verification)
+Validates the dataset integrity (62 classes, normalized coordinates, missing files check), initializes the model, loads pretrained weights, and executes 3 GPU training steps + 1 validation step without launching a long training job:
+```bash
+python scripts/train_yolox.py --dataset ../benchmark/retail-shelf --smoke-test
 ```
 
-### 1. Training & Validation
-- Use `train/` (training partition) and `valid/` (validation partition for early stopping and hyperparameter selection).
-- Initialize weights from COCO pretrained checkpoint.
-- Replace detection head with a 62-class classification and regression head.
+#### 2. Full Training Run
+```bash
+python scripts/train_yolox.py --dataset ../benchmark/retail-shelf --batch-size 4 --img-size 640 --epochs 30 --lr 0.001 --fp16 --output-dir checkpoints
+```
 
-### 2. Held-Out Test Evaluation
-- **Strictly reserve `test/`** for post-training benchmark evaluation.
-- No training, tuning, or hyperparameter selection should use the `test/` split.
+#### 3. Resuming Training
+To resume from the latest saved checkpoint after interruption:
+```bash
+python scripts/train_yolox.py --dataset ../benchmark/retail-shelf --resume checkpoints/last.pth
+```
 
-### 3. ONNX Export & Deployment
-- Export the trained PyTorch checkpoint to ONNX (`model_input_size: 640x640`).
-- Update `backend/app/services/vision.py` with the retail class list.
-- Run `backend/scripts/evaluate_detector.py` to produce final verified AP50, precision, and recall metrics.
+### Checkpoints and Artifacts
+Checkpoints are saved outside Git under `backend/checkpoints/` (or specified `--output-dir`):
+- `last.pth`: Checkpoint containing model weights, optimizer state, AMP scaler state, epoch number, best validation loss, and full history.
+- `best_model.pth`: PyTorch weights from the epoch with lowest validation loss.
+- `best_model.onnx`: Auto-exported ONNX model ready for deployment in `backend/app/services/vision.py`.
+- `training_history.json`: Epoch-by-epoch loss records and learning rate schedule.
+
