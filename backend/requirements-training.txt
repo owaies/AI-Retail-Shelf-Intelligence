@@ -1,0 +1,2 @@
+# Training-only dependencies. Keep these out of Vercel/runtime deployment.
+torch>=2.0.0
