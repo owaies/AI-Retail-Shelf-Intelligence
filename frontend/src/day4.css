@@ -278,3 +278,47 @@
   overscroll-behavior:contain;
   isolation:isolate;
 }
+
+
+/* Selector typography contrast fix */
+.custom-select-menu-portal,
+.custom-select-menu-portal .custom-select-option,
+.custom-select-menu-portal .custom-select-option span{
+  opacity:1!important;
+  text-shadow:none!important;
+}
+.custom-select-menu-portal .custom-select-option{
+  color:#25301f!important;
+  -webkit-text-fill-color:#25301f!important;
+  background:transparent!important;
+  font-weight:600!important;
+}
+.custom-select-menu-portal .custom-select-option .custom-select-radio{
+  color:#5b7040!important;
+  -webkit-text-fill-color:#5b7040!important;
+  opacity:1!important;
+}
+.custom-select-menu-portal .custom-select-option:hover{
+  color:#1f2a19!important;
+  -webkit-text-fill-color:#1f2a19!important;
+  background:linear-gradient(90deg,#e5edd9,#fffdf7)!important;
+}
+.custom-select-menu-portal .custom-select-option.is-selected{
+  color:#ffffff!important;
+  -webkit-text-fill-color:#ffffff!important;
+  background:linear-gradient(100deg,#344b25 0%,#617941 58%,#71874e 100%)!important;
+  border-color:#344b25!important;
+  box-shadow:0 8px 20px rgba(52,75,37,.22)!important;
+}
+.custom-select-menu-portal .custom-select-option.is-selected span,
+.custom-select-menu-portal .custom-select-option.is-selected .custom-select-radio,
+.custom-select-menu-portal .custom-select-option.is-selected .custom-select-check{
+  color:#ffffff!important;
+  -webkit-text-fill-color:#ffffff!important;
+  opacity:1!important;
+}
+.custom-select-menu-portal .custom-select-option.is-selected:hover{
+  color:#ffffff!important;
+  -webkit-text-fill-color:#ffffff!important;
+  background:linear-gradient(100deg,#2f451f 0%,#58703a 58%,#6d8249 100%)!important;
+}
