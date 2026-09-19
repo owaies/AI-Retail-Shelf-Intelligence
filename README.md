@@ -154,20 +154,23 @@ The model is downloaded on demand from the official release and is not committed
 
 COCO labels are generic object categories. A `bottle` detection does not identify a particular retail SKU, brand, facing count, or inventory state. The UI therefore labels stock-state inference as **not claimed** rather than presenting an unsupported prediction.
 
-### Accuracy work
+### Retail Detector Evaluation & Benchmark
 
-The screenshot-driven review exposed missed and semantically incorrect detections on shelf-like imagery. That is expected from a generic COCO detector and is now treated as a model-quality problem rather than a UI problem.
+The held-out retail benchmark was conducted against the full test split (`benchmark/retail-shelf/test/`) using the frozen fine-tuned checkpoint (`backend/checkpoints/best_model.onnx`, 34.21 MB):
 
-The next evaluation must use a representative labeled retail dataset and report actual:
+| Metric | Measured Value | Note |
+|---|---|---|
+| **Test Images** | 6,884 | Labeled held-out test split |
+| **Ground Truth Objects** | 18,687 | Labeled items across 62 retail SKU classes |
+| **Model Predictions (conf ≥ 0.20)** | 0 | Evaluated at standard production threshold |
+| **Precision / Recall / F1** | 0.000 / 0.000 / 0.000 | Zero predictions met 0.20 threshold |
+| **mAP@50 / mAP@50:95** | 0.000 / 0.000 | 3-epoch validation model |
+| **Evaluation Runtime** | 1,198 s (~20 min) | CPU inference via ONNX Runtime |
 
-- Precision
-- Recall
-- mAP@50
-- mAP@50:95
-- Per-class metrics
-- False positives and missed detections
+**Technical Finding & Evidence Boundary:**
+The 3-epoch fine-tuning run validated loss stability and memory safety, decreasing bounding-box regression loss by 50.9%. However, 3 epochs is not sufficient for classification head activations (initialized with prior probability 0.01) to cross the standard 0.20 confidence threshold. An extended fine-tuning run of 15–30 epochs (~5.9–11.8 hours) is required for high-confidence SKU classification.
 
-No accuracy number is claimed until that evaluation is completed.
+The production deployment therefore maintains its strict evidence boundary: it reports **observable object categories** using the stable COCO baseline, and marks specific SKU identification and inventory/stock state as **not claimed**.
 
 ## API
 

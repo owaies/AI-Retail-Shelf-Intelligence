@@ -6,6 +6,11 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
+SCRIPT_DIR = Path(__file__).resolve().parent
+BACKEND_DIR = SCRIPT_DIR.parent
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
 from app.services.evaluation import (
     DatasetVocabulary,
     GroundTruth,
@@ -151,10 +156,13 @@ def run_evaluation(
         model_version="retail-62" if model_path else "0.1.1rc0",
     )
 
+    image_paths = [p for p in sorted(image_dir.iterdir()) if p.suffix.lower() in IMAGE_EXTENSIONS]
+    if not image_paths:
+        raise ValueError(f"No supported images found in {image_dir}")
+
+    total_images = len(image_paths)
     samples: list[tuple[list[DetectionResult], list[GroundTruth]]] = []
-    for image_path in sorted(image_dir.iterdir()):
-        if image_path.suffix.lower() not in IMAGE_EXTENSIONS:
-            continue
+    for idx, image_path in enumerate(image_paths, start=1):
         width, height = detector.processor.image_dimensions(image_path)
         predictions = detector.analyze(str(image_path)).detections
         truths = load_ground_truth(
@@ -164,9 +172,8 @@ def run_evaluation(
             dataset_vocab.names,
         )
         samples.append((predictions, truths))
-
-    if not samples:
-        raise ValueError(f"No supported images found in {image_dir}")
+        if idx % 500 == 0 or idx == total_images:
+            print(f"Evaluated [{idx}/{total_images}] images...", file=sys.stderr, flush=True)
 
     metrics = evaluate_dataset(
         samples, iou_threshold=iou_threshold, class_agnostic=class_agnostic

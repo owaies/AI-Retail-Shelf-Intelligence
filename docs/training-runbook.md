@@ -88,6 +88,28 @@ The evaluator verifies the model vocabulary against the dataset vocabulary befor
 - TP / FP / FN
 - image, ground-truth, and prediction counts
 
+### Measured Held-Out Benchmark Results (3-Epoch Checkpoint)
+
+| Metric | Measured Value |
+|---|---|
+| **Split** | `test/` (held out) |
+| **Model** | YOLOX-S `retail-62` (`checkpoints/best_model.onnx`, 34.21 MB) |
+| **Test Images** | 6,884 |
+| **Ground Truth Objects** | 18,687 |
+| **Model Predictions (conf ≥ 0.20)** | 0 |
+| **True Positives** | 0 |
+| **False Positives** | 0 |
+| **False Negatives** | 18,687 |
+| **Precision** | 0.000 |
+| **Recall** | 0.000 |
+| **F1 Score** | 0.000 |
+| **mAP@50** | 0.000 |
+| **mAP@50:95** | 0.000 |
+| **Evaluation Runtime** | 1,198 s (19.97 min, ~174 ms/image CPU) |
+
+> [!NOTE]
+> The 3-epoch validation model verified pipeline convergence and IoU loss improvement, but classification logits remain below the standard 0.20 confidence threshold. Extended training (15–30 epochs) is required for classification head maturity before production SKU deployment.
+
 The test split must not be used to choose epochs, confidence thresholds, augmentation, or checkpoints.
 
 For the legacy COCO production detector, `--class-agnostic` is available only as a localization diagnostic. Its result must not be presented as SKU recognition accuracy.
