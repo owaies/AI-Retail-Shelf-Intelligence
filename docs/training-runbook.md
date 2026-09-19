@@ -1,6 +1,6 @@
 # YOLOX-S Retail Fine-Tuning Runbook
 
-This runbook covers the local training gate for the 62-class retail SKU detector. Training is intentionally local because the repository's free production services are not used for GPU training.
+This runbook covers the local training and held-out evaluation gates for the 62-class retail SKU detector. Training and benchmarking are intentionally local because the repository's free production services are not used for GPU training.
 
 ## Preconditions
 
@@ -50,7 +50,7 @@ The 3-epoch fine-tuning run was executed on the local NVIDIA RTX 3050 Laptop GPU
 - **Total Training Time**: 4,259.3 seconds (~70.99 minutes / 1.18 hours)
 - **Average Epoch Duration**: ~23.66 minutes (including full 4,081-image validation pass)
 - **Stability**: Zero NaN/Inf occurrences; zero CUDA OOM errors; stable VRAM footprint (<1.35 GB reserved vs 4 GB limit).
-- **Bounding Box Convergence**: Validation IoU loss improved by over 50% (from 1.3977 down to 0.6863).
+- **Bounding Box Convergence**: Validation IoU loss improved over the three-epoch run (1.3977 down to 0.6863).
 
 ### Checkpoint & Model Verification
 - **Artifacts Saved**:
@@ -63,13 +63,40 @@ The 3-epoch fine-tuning run was executed on the local NVIDIA RTX 3050 Laptop GPU
   - Executed inference on 5 validation samples.
   - Verified: all coordinates finite, confidences in `[0, 1]`, and predicted class IDs strictly in `[0, 61]`.
 
+## Held-Out Test Benchmark
+
+Run this only after the training configuration and checkpoint are frozen. The benchmark supports the local trained 62-class ONNX model and the matching retail vocabulary.
+
+From `backend/`:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\evaluate_detector.py `
+  ../benchmark/retail-shelf `
+  --split test `
+  --model-path checkpoints/best_model.onnx `
+  --model-vocab-yaml ../benchmark/retail-shelf/data.yaml `
+  --output checkpoints/test-evaluation.json
+```
+
+The evaluator verifies the model vocabulary against the dataset vocabulary before class-aware SKU evaluation. It reports:
+
+- Precision
+- Recall
+- F1
+- mAP@50
+- mAP@50:95
+- TP / FP / FN
+- image, ground-truth, and prediction counts
+
+The test split must not be used to choose epochs, confidence thresholds, augmentation, or checkpoints.
+
+For the legacy COCO production detector, `--class-agnostic` is available only as a localization diagnostic. Its result must not be presented as SKU recognition accuracy.
+
 ## Data partition rules
 
 - `train/` is used for optimization.
 - `valid/` is used for validation and checkpoint selection.
 - `test/` is held out until the model and training configuration are frozen.
-
-Do not use test metrics to choose epochs, thresholds, augmentations, or checkpoints.
 
 ## Long Run Recommendation
 
@@ -77,7 +104,7 @@ Based on the measured throughput of **23.66 minutes per epoch**:
 - A **15-epoch** fine-tuning run is estimated at **~5.9 hours**.
 - A **30-epoch** fine-tuning run is estimated at **~11.8 hours**.
 
-The 3-epoch validation confirms the pipeline, loss calculation, memory safety, and model convergence are fully functional.
+The 3-epoch validation confirms the pipeline, loss calculation, memory safety, checkpoint preservation, and inference output shape. It does not establish final SKU accuracy.
 
 ## Artifact policy
 
