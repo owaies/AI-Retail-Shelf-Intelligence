@@ -267,3 +267,14 @@
   position:relative;
   z-index:2;
 }
+
+
+/* Portaled selector menu escapes every card, table, sticky and overflow stacking context. */
+.custom-select-menu-portal{
+  position:fixed!important;
+  z-index:2147483000!important;
+  margin:0!important;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  isolation:isolate;
+}
