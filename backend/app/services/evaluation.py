@@ -40,7 +40,6 @@ class DatasetVocabulary:
         if isinstance(names_entry, list):
             names = tuple(str(n) for n in names_entry)
         elif isinstance(names_entry, dict):
-            # Formats like {0: 'classA', 1: 'classB'}
             sorted_indices = sorted(int(k) for k in names_entry.keys())
             names = tuple(str(names_entry[i]) for i in sorted_indices)
         else:
@@ -59,10 +58,10 @@ class DatasetVocabulary:
     def describe_mismatch(self, other: DatasetVocabulary | Sequence[str]) -> str:
         other_names = other.names if isinstance(other, DatasetVocabulary) else tuple(other)
         return (
-            f"Class vocabulary mismatch:\n"
+            "Class vocabulary mismatch:\n"
             f"  Expected ({len(self.names)} classes): {list(self.names[:5])}{'...' if len(self.names) > 5 else ''}\n"
             f"  Provided ({len(other_names)} classes): {list(other_names[:5])}{'...' if len(other_names) > 5 else ''}\n"
-            f"Direct SKU evaluation with an incompatible class vocabulary is invalid."
+            "Direct SKU evaluation with an incompatible class vocabulary is invalid."
         )
 
 
@@ -84,6 +83,7 @@ class EvaluationMetrics:
     recall: float
     f1: float
     ap50: float
+    map50_95: float
 
 
 def iou(a: BoundingBox, b: BoundingBox) -> float:
@@ -102,9 +102,82 @@ def _average_precision(recalls: list[float], precisions: list[float]) -> float:
     envelope = precisions[:]
     for index in range(len(envelope) - 2, -1, -1):
         envelope[index] = max(envelope[index], envelope[index + 1])
-    points = [0.0, *recalls, 1.0]
-    values = [envelope[0], *envelope, envelope[-1]]
-    return sum((points[i + 1] - points[i]) * values[i + 1] for i in range(len(points) - 1))
+    recall_points = [0.0, *recalls, 1.0]
+    precision_points = [envelope[0], *envelope, envelope[-1]]
+    return sum(
+        (recall_points[i + 1] - recall_points[i]) * precision_points[i + 1]
+        for i in range(len(recall_points) - 1)
+    )
+
+
+def _class_ap(
+    samples: list[tuple[list[DetectionResult], list[GroundTruth]]],
+    class_name: str,
+    iou_threshold: float,
+) -> float:
+    """Compute interpolated AP for one class using confidence-ranked predictions."""
+    ranked: list[tuple[float, bool]] = []
+    total_ground_truths = 0
+
+    for predictions, ground_truths in samples:
+        class_predictions = [p for p in predictions if p.class_name == class_name]
+        class_truths = [g for g in ground_truths if g.class_name == class_name]
+        total_ground_truths += len(class_truths)
+        matched: set[int] = set()
+
+        for prediction in sorted(class_predictions, key=lambda item: item.confidence, reverse=True):
+            candidates = [
+                (index, iou(prediction.box, truth.box))
+                for index, truth in enumerate(class_truths)
+                if index not in matched
+            ]
+            is_match = bool(candidates) and max(candidates, key=lambda item: item[1])[1] >= iou_threshold
+            if is_match:
+                best_index = max(candidates, key=lambda item: item[1])[0]
+                matched.add(best_index)
+            ranked.append((prediction.confidence, is_match))
+
+    if total_ground_truths == 0:
+        return 0.0
+
+    ranked.sort(key=lambda item: item[0], reverse=True)
+    tp = fp = 0
+    recalls: list[float] = []
+    precisions: list[float] = []
+    for _, matched_prediction in ranked:
+        if matched_prediction:
+            tp += 1
+        else:
+            fp += 1
+        recalls.append(tp / total_ground_truths)
+        precisions.append(tp / (tp + fp) if tp + fp else 0.0)
+
+    return _average_precision(recalls, precisions)
+
+
+def _mean_ap(
+    samples: list[tuple[list[DetectionResult], list[GroundTruth]]],
+    iou_threshold: float,
+    class_agnostic: bool = False,
+) -> float:
+    if class_agnostic:
+        converted = [
+            (
+                [DetectionResult("object", p.confidence, p.box) for p in predictions],
+                [GroundTruth("object", g.box) for g in ground_truths],
+            )
+            for predictions, ground_truths in samples
+        ]
+        return _class_ap(converted, "object", iou_threshold)
+
+    classes = sorted({
+        truth.class_name
+        for _, ground_truths in samples
+        for truth in ground_truths
+    })
+    if not classes:
+        return 0.0
+    return sum(_class_ap(samples, name, iou_threshold) for name in classes) / len(classes)
 
 
 def evaluate_image(
@@ -135,59 +208,44 @@ def evaluate_dataset(
     iou_threshold: float = 0.5,
     class_agnostic: bool = False,
 ) -> EvaluationMetrics:
-    """Evaluate a labeled dataset at one IoU threshold.
+    """Evaluate a labeled dataset at one IoU threshold and report mAP@50:95.
 
-    When class_agnostic is True, bounding boxes are matched based purely on IoU
-    overlap to measure localization/objectness recall without requiring class equality.
-    When class_agnostic is False, boxes only match if class_name is identical.
+    When class_agnostic is True, bounding boxes are matched by IoU only and the
+    mAP value is a localization/objectness diagnostic, not SKU accuracy.
     """
     true_positives = false_positives = false_negatives = 0
-    ranked: list[tuple[float, bool]] = []
     total_ground_truths = 0
+
     for predictions, ground_truths in samples:
-        matched: set[int] = set()
-        for prediction in sorted(predictions, key=lambda item: item.confidence, reverse=True):
-            candidates = [
-                (index, iou(prediction.box, truth.box))
-                for index, truth in enumerate(ground_truths)
-                if index not in matched and (class_agnostic or truth.class_name == prediction.class_name)
-            ]
-            is_match = bool(candidates) and max(candidates, key=lambda item: item[1])[1] >= iou_threshold
-            if is_match:
-                best_index = max(candidates, key=lambda item: item[1])[0]
-                matched.add(best_index)
-                true_positives += 1
-            else:
-                false_positives += 1
-            ranked.append((prediction.confidence, is_match))
-        false_negatives += len(ground_truths) - len(matched)
+        tp, fp, fn = evaluate_image(
+            predictions,
+            ground_truths,
+            iou_threshold=iou_threshold,
+            class_agnostic=class_agnostic,
+        )
+        true_positives += tp
+        false_positives += fp
+        false_negatives += fn
         total_ground_truths += len(ground_truths)
 
     precision = true_positives / (true_positives + false_positives) if true_positives + false_positives else 0.0
     recall = true_positives / total_ground_truths if total_ground_truths else 0.0
     f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
 
-    ranked.sort(key=lambda item: item[0], reverse=True)
-    tp = fp = 0
-    recalls: list[float] = []
-    precisions: list[float] = []
-    for _, matched_prediction in ranked:
-        if matched_prediction:
-            tp += 1
-        else:
-            fp += 1
-        recalls.append(tp / total_ground_truths if total_ground_truths else 0.0)
-        precisions.append(tp / (tp + fp) if tp + fp else 0.0)
+    map50 = _mean_ap(samples, 0.50, class_agnostic)
+    thresholds = [0.50 + 0.05 * index for index in range(10)]
+    map50_95 = sum(_mean_ap(samples, threshold, class_agnostic) for threshold in thresholds) / len(thresholds)
 
     return EvaluationMetrics(
         images=len(samples),
         ground_truths=total_ground_truths,
-        predictions=len(ranked),
+        predictions=sum(len(predictions) for predictions, _ in samples),
         true_positives=true_positives,
         false_positives=false_positives,
         false_negatives=false_negatives,
         precision=precision,
         recall=recall,
         f1=f1,
-        ap50=_average_precision(recalls, precisions),
+        ap50=map50,
+        map50_95=map50_95,
     )
