@@ -305,15 +305,17 @@ class YOLOXHead(nn.Module):
 
             # Shape: [B, 4 + 1 + num_classes, H, W]
             output = torch.cat([reg_output, obj_output.sigmoid(), cls_output.sigmoid()], dim=1)
-            raw_outputs.append(torch.cat([reg_output, obj_output, cls_output], dim=1))
+            raw_output = torch.cat([reg_output, obj_output, cls_output], dim=1)
             strides_list.append(stride)
 
             # Flatten to [B, H*W, 4 + 1 + num_classes]
             b, c, h, w = output.shape
             output = output.view(b, c, -1).permute(0, 2, 1)
+            raw_output = raw_output.view(b, c, -1).permute(0, 2, 1)
             outputs.append(output)
+            raw_outputs.append(raw_output)
 
-        return torch.cat(outputs, dim=1), raw_outputs, strides_list
+        return torch.cat(outputs, dim=1), torch.cat(raw_outputs, dim=1), strides_list
 
 
 class YOLOX(nn.Module):
@@ -323,9 +325,11 @@ class YOLOX(nn.Module):
         self.backbone = backbone or YOLOPAFPN(depth=0.33, width=0.50)
         self.head = head or YOLOXHead(num_classes=80, width=0.50)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, return_raw: bool = False) -> torch.Tensor:
         fpn_outs = self.backbone(x)
-        outputs, _, _ = self.head(fpn_outs)
+        outputs, raw_outputs, _ = self.head(fpn_outs)
+        if self.training or return_raw:
+            return raw_outputs
         return outputs
 
 

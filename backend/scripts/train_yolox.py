@@ -106,10 +106,10 @@ def evaluate_validation(
 
             if use_amp and device.type == "cuda":
                 with torch.amp.autocast("cuda"):
-                    outputs = model(images)
+                    outputs = model(images, return_raw=True)
                     loss, metrics = loss_fn(outputs, targets, (images.shape[2], images.shape[3]))
             else:
-                outputs = model(images)
+                outputs = model(images, return_raw=True)
                 loss, metrics = loss_fn(outputs, targets, (images.shape[2], images.shape[3]))
 
             total_val_loss += metrics["loss_total"]

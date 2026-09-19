@@ -165,12 +165,12 @@ class YOLOXLoss(nn.Module):
             loss_iou = self.iou_loss(matched_pred_boxes, matched_gt_boxes).sum()
             total_loss_iou = total_loss_iou + loss_iou
 
-            # Classification loss (One-hot BCE)
+            # Classification loss (One-hot BCE with logits)
             cls_targets = F.one_hot(matched_gt_classes, num_classes=self.num_classes).float()
             loss_cls = self.bce_loss(matched_pred_cls, cls_targets).sum()
             total_loss_cls = total_loss_cls + loss_cls
 
-            # Objectness loss
+            # Objectness loss (BCE with logits)
             obj_targets = torch.zeros_like(b_pred_obj)
             obj_targets[pos_anchor_mask] = 1.0
             loss_obj = self.bce_loss(b_pred_obj, obj_targets).sum()
