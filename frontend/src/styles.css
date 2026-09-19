@@ -866,3 +866,46 @@ input[type="time"]::-webkit-calendar-picker-indicator{
   background:linear-gradient(135deg,#edf2e5,#fffdf7);
   font-size:12px;
 }
+
+/* Analysis actions stay below the image so detection overlays can never block Replace. */
+.analysis-action-row{
+  display:grid;
+  grid-template-columns:minmax(150px,.34fr) minmax(0,1fr);
+  gap:10px;
+  margin-top:14px;
+}
+.analysis-action-row .primary-button,
+.analysis-action-row .secondary-button{
+  margin-top:0;
+  min-height:48px;
+}
+.replace-button{
+  background:linear-gradient(135deg,#fffdf7,#eeeade);
+  border-color:#b8b9ad;
+  color:#4a553d;
+}
+.replace-button:hover{
+  border-color:var(--olive);
+  color:#334128;
+  background:linear-gradient(135deg,#fffefb,#e9eedf);
+}
+.stage-meta{
+  min-height:48px;
+  display:flex;
+  align-items:center;
+  padding:0 12px;
+  border-top:1px solid rgba(184,185,173,.55);
+  background:rgba(8,11,16,.94);
+  color:#b8bcae;
+  font:9px 'Space Mono';
+  letter-spacing:.03em;
+  overflow:hidden;
+}
+.stage-meta span{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+@media(max-width:620px){
+  .analysis-action-row{grid-template-columns:1fr;}
+}
