@@ -46,6 +46,28 @@ async function authRequest<T>(path: string, init: RequestInit): Promise<T> {
   return response.json() as Promise<T>
 }
 
+export type SignUpResult = {
+  session: AuthSession | null
+  confirmationRequired: boolean
+}
+
+export async function signUp(email: string, password: string): Promise<SignUpResult> {
+  const result = await authRequest<{ access_token?: string; refresh_token?: string; user?: { id: string; email?: string } }>('/signup', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  })
+  if (result.access_token && result.user) {
+    const session: AuthSession = {
+      access_token: result.access_token,
+      refresh_token: result.refresh_token,
+      user: result.user,
+    }
+    sessionStorage.setItem(TOKEN_KEY, session.access_token)
+    return { session, confirmationRequired: false }
+  }
+  return { session: null, confirmationRequired: true }
+}
+
 export async function signIn(email: string, password: string): Promise<AuthSession> {
   const session = await authRequest<AuthSession>('/token?grant_type=password', {
     method: 'POST',
