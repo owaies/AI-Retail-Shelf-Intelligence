@@ -19,7 +19,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="app-shell">
+    <div className="app-shell"><div className="ambient ambient-one" aria-hidden="true" /><div className="ambient ambient-two" aria-hidden="true" />
       <header className="topbar">
         <NavLink className="brand" to="/" aria-label="Retail Vision Intelligence home">
           <span className="brand-mark" aria-hidden="true">RV</span>
@@ -41,7 +41,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
         <button className="sign-out-button" type="button" onClick={handleSignOut}>SIGN OUT</button>
       </header>
-      <main className="page-content">{children}</main>
+      <main className="page-content page-transition"><div className="page-orbit" aria-hidden="true" />{children}</main>
     </div>
   )
 }
