@@ -3,18 +3,14 @@ import pytest
 
 from app.services.evaluation import (
     DatasetVocabulary,
-    EvaluationMetrics,
     GroundTruth,
     VocabularyMismatchError,
     evaluate_dataset,
-    evaluate_image,
     iou,
 )
-from app.services.vision import BoundingBox, COCO_CLASSES, DetectionResult
+from app.services.vision import BoundingBox, DetectionResult
 from scripts.evaluate_detector import (
-    find_data_yaml,
     load_ground_truth,
-    resolve_dataset_directories,
     run_evaluation,
 )
 
@@ -49,6 +45,7 @@ def test_dataset_metrics_match_one_to_one_predictions():
     assert metrics.recall == 1.0
     assert metrics.f1 == 2 / 3
     assert metrics.ap50 == 1.0
+    assert metrics.map50_95 == 1.0
 
 
 def test_wrong_class_is_false_positive_and_missed_ground_truth():
@@ -62,6 +59,7 @@ def test_wrong_class_is_false_positive_and_missed_ground_truth():
     assert metrics.recall == 0.0
     assert metrics.f1 == 0.0
     assert metrics.ap50 == 0.0
+    assert metrics.map50_95 == 0.0
 
 
 def test_class_agnostic_evaluation_matches_overlapping_boxes_regardless_of_class():
@@ -79,6 +77,19 @@ def test_class_agnostic_evaluation_matches_overlapping_boxes_regardless_of_class
     assert metrics.recall == 1.0
     assert metrics.f1 == 1.0
     assert metrics.ap50 == 1.0
+    assert metrics.map50_95 == 1.0
+
+
+def test_map_is_averaged_over_present_classes():
+    samples = [
+        (
+            [prediction("bottle", confidence=0.95), prediction("cup", confidence=0.9)],
+            [GroundTruth("bottle", box()), GroundTruth("cup", box())],
+        )
+    ]
+    metrics = evaluate_dataset(samples)
+    assert metrics.ap50 == pytest.approx(1.0)
+    assert metrics.map50_95 == pytest.approx(1.0)
 
 
 def test_dataset_vocabulary_from_yaml_list(tmp_path: Path):
@@ -125,7 +136,6 @@ def test_load_ground_truth_with_valid_and_invalid_classes(tmp_path: Path):
     assert truths[0].class_name == "item_a"
     assert truths[1].class_name == "item_b"
 
-    # Out of range class index raises ValueError
     label_file_bad = tmp_path / "bad.txt"
     label_file_bad.write_text("99 0.5 0.5 0.2 0.4\n")
     with pytest.raises(ValueError, match="invalid class id 99"):
@@ -133,7 +143,6 @@ def test_load_ground_truth_with_valid_and_invalid_classes(tmp_path: Path):
 
 
 def test_run_evaluation_rejects_sku_vocabulary_mismatch_without_silent_coco_conversion(tmp_path: Path):
-    # Setup mock retail dataset with data.yaml (62 SKU classes)
     dataset_dir = tmp_path / "retail"
     images_dir = dataset_dir / "images"
     labels_dir = dataset_dir / "labels"
@@ -143,7 +152,6 @@ def test_run_evaluation_rejects_sku_vocabulary_mismatch_without_silent_coco_conv
     yaml_file = dataset_dir / "data.yaml"
     yaml_file.write_text("nc: 2\nnames: ['BargsBlack20Oz', 'BuenoShareSize']\n")
 
-    # Image + label
     img_file = images_dir / "shelf.jpg"
     import numpy as np
     import cv2
@@ -153,6 +161,5 @@ def test_run_evaluation_rejects_sku_vocabulary_mismatch_without_silent_coco_conv
     lbl_file = labels_dir / "shelf.txt"
     lbl_file.write_text("0 0.5 0.5 0.2 0.2\n")
 
-    # Direct evaluation MUST raise VocabularyMismatchError
     with pytest.raises(VocabularyMismatchError, match="Class vocabulary mismatch"):
         run_evaluation(dataset_dir)
