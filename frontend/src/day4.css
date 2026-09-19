@@ -237,3 +237,33 @@
   .custom-select-menu{position:fixed;left:10px;right:10px;top:auto;bottom:12px;max-height:55vh;overflow:auto}
   .custom-select-menu::before{display:none}
 }
+
+
+/* Selector visibility fix: the history filter panel must not clip the custom menu. */
+.history-toolbar{
+  position:relative;
+  overflow:visible!important;
+  z-index:40;
+}
+.history-toolbar>label{
+  position:relative;
+  z-index:1;
+}
+.history-toolbar>label:has(.custom-select-trigger.is-open){
+  z-index:200;
+}
+.custom-select{
+  position:relative;
+  z-index:50;
+}
+.custom-select-menu{
+  display:block;
+  visibility:visible;
+  opacity:1;
+  pointer-events:auto;
+  z-index:9999;
+}
+.custom-select-trigger{
+  position:relative;
+  z-index:2;
+}
