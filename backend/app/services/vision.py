@@ -5,6 +5,7 @@ import urllib.request
 from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Sequence
 
 import cv2
 import numpy as np
@@ -62,14 +63,27 @@ class VisionAnalysis:
 class VisionService:
     """Local YOLOX ONNX inference. No paid inference service and no mock results."""
 
-    def __init__(self, processor: ImageProcessor | None = None) -> None:
+    def __init__(
+        self,
+        processor: ImageProcessor | None = None,
+        model_path: Path | str | None = None,
+        class_names: Sequence[str] | None = None,
+        model_name: str = MODEL_NAME,
+        model_version: str = MODEL_VERSION,
+    ) -> None:
         self.processor = processor or ImageProcessor(settings.model_input_size)
+        self._configured_model_path = Path(model_path) if model_path else None
+        self.class_names = tuple(class_names) if class_names else COCO_CLASSES
+        self.model_name = model_name
+        self.model_version = model_version
         self._session = None
 
     def _model_path(self) -> Path:
-        path = Path(settings.model_path)
+        path = self._configured_model_path or Path(settings.model_path)
         if path.exists() and path.stat().st_size > 0:
             return path
+        if self._configured_model_path:
+            raise FileNotFoundError(f"Configured detector model not found: {path}")
         path.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(delete=False, dir=path.parent, suffix=".onnx") as tmp:
             temporary = Path(tmp.name)
@@ -94,6 +108,14 @@ class VisionService:
         if self._session is None:
             import onnxruntime as ort
             self._session = ort.InferenceSession(str(self._model_path()), providers=["CPUExecutionProvider"])
+            output_shape = self._session.get_outputs()[0].shape
+            if len(output_shape) == 3 and isinstance(output_shape[-1], int):
+                expected_classes = output_shape[-1] - 5
+                if expected_classes != len(self.class_names):
+                    raise ValueError(
+                        f"Detector output has {expected_classes} classes but "
+                        f"the configured vocabulary has {len(self.class_names)}"
+                    )
         return self._session
 
     @staticmethod
@@ -117,8 +139,13 @@ class VisionService:
             order = order[1:][iou <= threshold]
         return keep
 
-    @staticmethod
-    def _postprocess(output: np.ndarray, prepared: PreparedImage, confidence: float, nms_threshold: float) -> list[DetectionResult]:
+    def _postprocess(
+        self,
+        output: np.ndarray,
+        prepared: PreparedImage,
+        confidence: float,
+        nms_threshold: float,
+    ) -> list[DetectionResult]:
         predictions = output[0] if output.ndim == 3 else output
         h, w = prepared.input_size
         grids, strides = [], []
@@ -150,11 +177,11 @@ class VisionService:
         results: list[DetectionResult] = []
         for class_id in np.unique(class_ids[candidates]) if len(candidates) else []:
             cls_candidates = candidates[class_ids[candidates] == class_id]
-            keep = VisionService._nms(boxes[cls_candidates], scores[cls_candidates], nms_threshold)
+            keep = self._nms(boxes[cls_candidates], scores[cls_candidates], nms_threshold)
             for index in keep:
                 box = boxes[cls_candidates[index]]
                 results.append(DetectionResult(
-                    class_name=COCO_CLASSES[int(class_id)],
+                    class_name=self.class_names[int(class_id)],
                     confidence=float(scores[cls_candidates[index]]),
                     box=BoundingBox(float(box[0]), float(box[1]), float(box[2] - box[0]), float(box[3] - box[1])),
                 ))
