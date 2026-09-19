@@ -834,3 +834,35 @@ input[type="time"]::-webkit-calendar-picker-indicator{
   filter:sepia(.25) saturate(.65);
   opacity:.72;
 }
+
+.auth-switch{
+  margin:18px 0 0;
+  text-align:center;
+  color:#697060;
+  font-size:12px;
+}
+.auth-switch a{
+  color:#43582f;
+  font-weight:800;
+  letter-spacing:.06em;
+  text-decoration:none;
+  position:relative;
+}
+.auth-switch a::after{
+  content:'';
+  position:absolute;
+  left:0;right:0;bottom:-3px;height:1px;
+  background:linear-gradient(90deg,#56683b,#c88a27);
+  transform:scaleX(.35);
+  transform-origin:center;
+  transition:transform .25s ease;
+}
+.auth-switch a:hover::after{transform:scaleX(1)}
+.auth-success{
+  padding:11px 13px;
+  border-left:3px solid #56683b;
+  border-radius:0 10px 10px 0;
+  color:#344126;
+  background:linear-gradient(135deg,#edf2e5,#fffdf7);
+  font-size:12px;
+}
