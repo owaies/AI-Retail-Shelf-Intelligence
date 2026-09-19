@@ -83,14 +83,14 @@ python scripts/evaluate_detector.py ../benchmark/retail-shelf --split test --cla
 
 A reproducible PyTorch training pipeline is implemented under `backend/app/training/` and `backend/scripts/train_yolox.py`. It trains the exact YOLOX-S architecture with 62-class output heads, initialized from official Megvii COCO pretrained weights (`yolox_s.pth`).
 
-### Hardware Specifications & Profile (Tested Environment)
+### Hardware Specifications & Profile (Measured Environment)
 - **GPU**: NVIDIA GeForce RTX 3050 Laptop GPU (4 GB VRAM)
-- **Compute Stack**: CUDA 13.0 Driver / PyTorch 2.7.1 + cu118 / Mixed Precision (AMP FP16)
-- **Recommended Batch Size**: `4` (Safe for 4 GB GPUs; peak VRAM reserved is ~1.27 GB, leaving >2.7 GB headroom)
+- **Compute Stack**: CUDA 11.8 / PyTorch 2.7.1 + cu118 / Mixed Precision (AMP FP16)
+- **Recommended Batch Size**: `4` (Safe for 4 GB GPUs; peak VRAM allocated is 1.11 GB, peak reserved is 1.35 GB, leaving >2.6 GB headroom)
 - **Input Dimension**: `640x640` (Native YOLOX-S letterbox resolution)
-- **Steady-State Throughput**: ~225 ms per batch of 4 on RTX 3050
-- **Epoch Duration**: ~22.8 minutes per epoch across 24,415 training images (6,104 steps/epoch)
-- **Estimated 30-Epoch Training**: ~11.4 hours total on RTX 3050
+- **Measured Throughput**: ~23.66 minutes per epoch across 24,415 training images + 4,081 validation images (6,104 steps/epoch)
+- **Validation Run**: 3 epochs completed in 70.99 minutes (loss: 46.186 -> 45.123, val loss: 45.867 -> 45.139)
+- **Estimated 30-Epoch Training**: ~11.8 hours total on RTX 3050
 
 ### Strict Dataset Partition Separation
 > [!IMPORTANT]

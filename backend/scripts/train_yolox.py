@@ -409,7 +409,7 @@ def train_yolox(
             total_train_loss += metrics["loss_total"]
             total_steps += 1
 
-            if step % 200 == 0 or step == len(train_loader):
+            if step == 1 or step % 200 == 0 or step == len(train_loader):
                 logger.info(
                     f"Epoch [{epoch}/{epochs}] Step [{step}/{len(train_loader)}] "
                     f"Loss: {metrics['loss_total']:.4f} (IoU: {metrics['loss_iou']:.4f}, "
@@ -425,6 +425,9 @@ def train_yolox(
         val_metrics = evaluate_validation(model, val_loader, loss_fn, device, use_amp=use_amp)
         val_loss = val_metrics["val_loss"]
 
+        vram_alloc = round(torch.cuda.max_memory_allocated() / (1024 * 1024), 2) if device.type == "cuda" else 0.0
+        vram_res = round(torch.cuda.max_memory_reserved() / (1024 * 1024), 2) if device.type == "cuda" else 0.0
+
         epoch_record = {
             "epoch": epoch,
             "train_loss": round(epoch_train_loss, 4),
@@ -434,12 +437,15 @@ def train_yolox(
             "val_obj": round(val_metrics["val_obj"], 4),
             "epoch_time_sec": round(epoch_time, 2),
             "lr": optimizer.param_groups[0]["lr"],
+            "vram_peak_allocated_mb": vram_alloc,
+            "vram_peak_reserved_mb": vram_res,
         }
         history.append(epoch_record)
 
         logger.info(
             f"--> Epoch {epoch}/{epochs} complete in {epoch_time:.1f}s | "
-            f"Train Loss: {epoch_train_loss:.4f} | Val Loss: {val_loss:.4f}"
+            f"Train Loss: {epoch_train_loss:.4f} | Val Loss: {val_loss:.4f} | "
+            f"VRAM Peak: {vram_alloc:.1f} MB alloc, {vram_res:.1f} MB res"
         )
 
         # Save last checkpoint

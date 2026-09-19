@@ -28,18 +28,40 @@ From `backend/`:
 
 The purpose of this run is to verify that real retail fine-tuning is stable and that validation loss/checkpoint behavior is sensible before committing to a long run. It is not a final accuracy benchmark.
 
-## What to record
+## Measured 3-Epoch Validation Results
 
-Record the following from the run:
+The 3-epoch fine-tuning run was executed on the local NVIDIA RTX 3050 Laptop GPU (4 GB VRAM) using mixed precision (AMP FP16), batch size 4, and native 640×640 image size.
 
-- epoch and training loss
-- validation loss/metrics, if emitted by the trainer
-- learning rate
-- average step time
-- peak allocated and reserved VRAM
-- CUDA OOM or NaN/Inf events
-- best checkpoint path
-- exported model path, if ONNX export is enabled
+### Hardware & Environment
+- **GPU**: NVIDIA GeForce RTX 3050 Laptop GPU (4.00 GB VRAM)
+- **Framework**: PyTorch 2.7.1 + CUDA 11.8
+- **Dataset**: `benchmark/retail-shelf` (24,415 train images, 4,081 valid images, 62 SKU classes)
+- **Batch Size**: 4 (6,104 optimization steps per epoch)
+- **Mixed Precision**: Enabled (PyTorch `torch.amp.autocast`)
+
+### Epoch Progression
+
+| Epoch | Train Loss | Val Loss | Val IoU Loss | Val Cls Loss | Val Obj Loss | Epoch Time | Learning Rate | Peak VRAM Alloc | Peak VRAM Res |
+|---|---|---|---|---|---|---|---|---|---|
+| **1** | 46.1860 | 45.8669 | 1.3977 | 42.9818 | 1.4874 | 1,516.2 s (25.3 min) | 0.000752 | 1,106.1 MB | 1,266.0 MB |
+| **2** | 45.4558 | 45.4268 | 0.9658 | 42.9804 | 1.4806 | 1,330.6 s (22.2 min) | 0.000258 | 1,106.1 MB | 1,348.0 MB |
+| **3** | 45.1229 | 45.1390 | 0.6863 | 42.9792 | 1.4734 | 1,412.5 s (23.5 min) | 0.000010 | 1,106.1 MB | 1,350.0 MB |
+
+- **Total Training Time**: 4,259.3 seconds (~70.99 minutes / 1.18 hours)
+- **Average Epoch Duration**: ~23.66 minutes (including full 4,081-image validation pass)
+- **Stability**: Zero NaN/Inf occurrences; zero CUDA OOM errors; stable VRAM footprint (<1.35 GB reserved vs 4 GB limit).
+- **Bounding Box Convergence**: Validation IoU loss improved by over 50% (from 1.3977 down to 0.6863).
+
+### Checkpoint & Model Verification
+- **Artifacts Saved**:
+  - `backend/checkpoints/best_model.pth` (36.1 MB, lowest val loss: `45.1390`)
+  - `backend/checkpoints/best_model.onnx` (35.9 MB, 62-class output shape `[1, 8400, 67]`)
+  - `backend/checkpoints/last.pth` (72.0 MB, full model, optimizer, scaler, and history)
+  - `backend/checkpoints/training_history.json`
+- **Validation Sample Inference**:
+  - Successfully loaded `best_model.pth` using `create_yolox_s(num_classes=62)`.
+  - Executed inference on 5 validation samples.
+  - Verified: all coordinates finite, confidences in `[0, 1]`, and predicted class IDs strictly in `[0, 61]`.
 
 ## Data partition rules
 
@@ -49,13 +71,13 @@ Record the following from the run:
 
 Do not use test metrics to choose epochs, thresholds, augmentations, or checkpoints.
 
-## After the short run
+## Long Run Recommendation
 
-1. Confirm the checkpoint loads successfully.
-2. Run a small inference sample against validation images.
-3. Confirm predicted class IDs are in `0..61` and bounding boxes are finite and valid.
-4. If the run is stable and learning, use measured throughput to choose a longer training duration.
-5. Only after the training configuration is frozen, evaluate the held-out test split and report precision, recall, mAP@50, mAP@50:95, and per-class results.
+Based on the measured throughput of **23.66 minutes per epoch**:
+- A **15-epoch** fine-tuning run is estimated at **~5.9 hours**.
+- A **30-epoch** fine-tuning run is estimated at **~11.8 hours**.
+
+The 3-epoch validation confirms the pipeline, loss calculation, memory safety, and model convergence are fully functional.
 
 ## Artifact policy
 

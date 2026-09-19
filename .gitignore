@@ -17,8 +17,11 @@ backend/uploads/
 backend/tmp/
 backend/.venv/
 benchmark/
+checkpoints/
+backend/checkpoints/
 *.onnx
 *.pth
 *.pt
 *.zip
 *.tar.gz
+*.mp4
