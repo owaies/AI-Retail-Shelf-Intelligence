@@ -1,5 +1,5 @@
 import { FormEvent, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { getAccessToken, signIn } from '../services/auth'
 
 export function LoginPage() {
@@ -45,6 +45,7 @@ export function LoginPage() {
             {loading ? 'AUTHENTICATING…' : 'SIGN IN'}
           </button>
         </form>
+        <p className="auth-switch">New here? <Link to="/signup">CREATE ACCOUNT</Link></p>
       </section>
     </main>
   )
