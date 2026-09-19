@@ -1,21 +1,53 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { createPortal } from 'react-dom'
 import { api } from '../services/api'
 import type { Analysis, AnalysisSummary } from '../types'
 
 function CustomSelect({ value, options, onChange, label }: { value: string; options: { value: string; label: string }[]; onChange: (value: string) => void; label: string }) {
   const [open, setOpen] = useState(false)
+  const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({})
   const root = useRef<HTMLDivElement>(null)
+  const trigger = useRef<HTMLButtonElement>(null)
   const active = options.find(option => option.value === value) ?? options[0]
+
+  const positionMenu = () => {
+    const el = trigger.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    const menuHeight = Math.min(options.length * 50 + 14, 280)
+    const gap = 8
+    const below = window.innerHeight - rect.bottom
+    const top = below >= menuHeight + gap ? rect.bottom + gap : Math.max(10, rect.top - menuHeight - gap)
+    setMenuStyle({ position: 'fixed', left: rect.left, top, width: rect.width, maxHeight: Math.min(menuHeight, window.innerHeight - 20) })
+  }
+
   useEffect(() => {
-    const close = (event: MouseEvent) => { if (root.current && !root.current.contains(event.target as Node)) setOpen(false) }
+    if (!open) return
+    positionMenu()
+    const reposition = () => positionMenu()
+    window.addEventListener('resize', reposition)
+    window.addEventListener('scroll', reposition, true)
+    return () => {
+      window.removeEventListener('resize', reposition)
+      window.removeEventListener('scroll', reposition, true)
+    }
+  }, [open, options.length])
+
+  useEffect(() => {
+    const close = (event: MouseEvent) => {
+      const target = event.target as Node
+      if (root.current?.contains(target) || document.getElementById('retail-custom-select-menu')?.contains(target)) return
+      setOpen(false)
+    }
     document.addEventListener('mousedown', close)
     return () => document.removeEventListener('mousedown', close)
   }, [])
+
   useEffect(() => {
     const key = (event: KeyboardEvent) => {
       if (!open) return
-      if (event.key === 'Escape') { event.preventDefault(); setOpen(false) }
+      if (event.key === 'Escape') { event.preventDefault(); setOpen(false); trigger.current?.focus() }
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
         event.preventDefault()
         const index = Math.max(0, options.findIndex(option => option.value === value))
@@ -27,15 +59,21 @@ function CustomSelect({ value, options, onChange, label }: { value: string; opti
     document.addEventListener('keydown', key)
     return () => document.removeEventListener('keydown', key)
   }, [open, options, value, onChange])
-  return <div className="custom-select" ref={root}>
-    <button className={`custom-select-trigger${open ? ' is-open' : ''}`} type="button" aria-haspopup="listbox" aria-expanded={open} aria-label={label} onClick={() => setOpen(current => !current)}>
-      <span>{active?.label}</span><span className="custom-select-chevron" aria-hidden="true">⌄</span>
-    </button>
-    {open && <div className="custom-select-menu" role="listbox" aria-label={label}>
-      {options.map(option => <button key={option.value} type="button" role="option" aria-selected={option.value === value} className={`custom-select-option${option.value === value ? ' is-selected' : ''}`} onClick={() => { onChange(option.value); setOpen(false) }}>
+
+  const menu = open ? createPortal(
+    <div id="retail-custom-select-menu" className="custom-select-menu custom-select-menu-portal" role="listbox" aria-label={label} style={menuStyle}>
+      {options.map(option => <button key={option.value} type="button" role="option" aria-selected={option.value === value} className={`custom-select-option${option.value === value ? ' is-selected' : ''}`} onClick={() => { onChange(option.value); setOpen(false); trigger.current?.focus() }}>
         <span className="custom-select-radio" aria-hidden="true">{option.value === value ? '●' : '○'}</span><span>{option.label}</span>{option.value === value && <span className="custom-select-check" aria-hidden="true">✓</span>}
       </button>)}
-    </div>}
+    </div>,
+    document.body
+  ) : null
+
+  return <div className="custom-select" ref={root}>
+    <button ref={trigger} className={`custom-select-trigger${open ? ' is-open' : ''}`} type="button" aria-haspopup="listbox" aria-expanded={open} aria-label={label} onClick={() => setOpen(current => !current)}>
+      <span>{active?.label}</span><span className="custom-select-chevron" aria-hidden="true">⌄</span>
+    </button>
+    {menu}
   </div>
 }
 
