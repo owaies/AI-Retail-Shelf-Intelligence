@@ -1,7 +1,43 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api } from '../services/api'
 import type { Analysis, AnalysisSummary } from '../types'
+
+function CustomSelect({ value, options, onChange, label }: { value: string; options: { value: string; label: string }[]; onChange: (value: string) => void; label: string }) {
+  const [open, setOpen] = useState(false)
+  const root = useRef<HTMLDivElement>(null)
+  const active = options.find(option => option.value === value) ?? options[0]
+  useEffect(() => {
+    const close = (event: MouseEvent) => { if (root.current && !root.current.contains(event.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', close)
+    return () => document.removeEventListener('mousedown', close)
+  }, [])
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => {
+      if (!open) return
+      if (event.key === 'Escape') { event.preventDefault(); setOpen(false) }
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+        event.preventDefault()
+        const index = Math.max(0, options.findIndex(option => option.value === value))
+        const next = event.key === 'ArrowDown' ? (index + 1) % options.length : (index - 1 + options.length) % options.length
+        onChange(options[next].value)
+      }
+      if (event.key === 'Enter') { event.preventDefault(); setOpen(false) }
+    }
+    document.addEventListener('keydown', key)
+    return () => document.removeEventListener('keydown', key)
+  }, [open, options, value, onChange])
+  return <div className="custom-select" ref={root}>
+    <button className={`custom-select-trigger${open ? ' is-open' : ''}`} type="button" aria-haspopup="listbox" aria-expanded={open} aria-label={label} onClick={() => setOpen(current => !current)}>
+      <span>{active?.label}</span><span className="custom-select-chevron" aria-hidden="true">⌄</span>
+    </button>
+    {open && <div className="custom-select-menu" role="listbox" aria-label={label}>
+      {options.map(option => <button key={option.value} type="button" role="option" aria-selected={option.value === value} className={`custom-select-option${option.value === value ? ' is-selected' : ''}`} onClick={() => { onChange(option.value); setOpen(false) }}>
+        <span className="custom-select-radio" aria-hidden="true">{option.value === value ? '●' : '○'}</span><span>{option.label}</span>{option.value === value && <span className="custom-select-check" aria-hidden="true">✓</span>}
+      </button>)}
+    </div>}
+  </div>
+}
 
 function ErrorNotice({ message }: { message: string }) { return <div className="error-notice" role="alert"><strong>REQUEST ERROR</strong><span>{message}</span></div> }
 function EmptyPanel({ title, text }: { title: string; text: string }) { return <div className="empty-panel"><span className="cross" aria-hidden="true">+</span><strong>{title}</strong><p>{text}</p></div> }
@@ -52,8 +88,8 @@ export function Day4HistoryPage() {
     </section>}
     <section className="history-toolbar panel" aria-label="History filters">
       <label><span>SEARCH IMAGE</span><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search filename" /></label>
-      <label><span>MODEL</span><select value={model} onChange={e => setModel(e.target.value)}><option value="ALL">ALL MODELS</option>{models.map(name => <option key={name} value={name}>{name}</option>)}</select></label>
-      <label><span>SORT</span><select value={sort} onChange={e => setSort(e.target.value as typeof sort)}><option value="newest">NEWEST</option><option value="oldest">OLDEST</option><option value="detections">MOST DETECTIONS</option></select></label>
+      <label><span>MODEL</span><CustomSelect label="Model filter" value={model} onChange={setModel} options={[{ value: 'ALL', label: 'ALL MODELS' }, ...models.map(name => ({ value: name, label: name }))]} /></label>
+      <label><span>SORT</span><CustomSelect label="Sort history" value={sort} onChange={value => setSort(value as typeof sort)} options={[{ value: 'newest', label: 'NEWEST' }, { value: 'oldest', label: 'OLDEST' }, { value: 'detections', label: 'MOST DETECTIONS' }]} /></label>
       <div className="filter-count"><strong>{filtered.length}</strong><span>VISIBLE / {items.length} TOTAL</span></div>
       <button className="secondary-button export-button" type="button" onClick={exportHistory} disabled={!filtered.length}>EXPORT CSV</button>
     </section>
