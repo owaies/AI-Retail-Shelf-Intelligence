@@ -66,7 +66,8 @@ async def create_analysis(
     stored = repository.create(
         user_id=user.id, email=user.email, image_name=display_name,
         width=analysis.width, height=analysis.height, detections=analysis.detections,
-        model_name="YOLOX-Tiny", model_version="0.1.1rc0", object_coverage=analysis.object_coverage,
+        model_name=vision_service.model_name, model_version=vision_service.model_version,
+        object_coverage=analysis.object_coverage,
     )
     return _response(stored)
 
