@@ -16,7 +16,7 @@ Production deployment is on Vercel using the repository's `main` branch.
 
 ## Current Status
 
-**Day 4.5 · Vision quality upgrade in progress**
+**Day 5 · Testing / polish / deployment verification**
 
 The full-stack application, authenticated workflow, persistence, history, analytics, CSV export, and production deployment are implemented. The current work is improving the generic detector baseline before claiming retail-specific accuracy.
 
