@@ -16,7 +16,7 @@ class ShelfAssessment:
 class ShelfAnalyzer:
     """Evidence-bounded shelf analysis.
 
-    YOLOX-Tiny is pretrained on COCO, not shelf/SKU data, so this stage does not
+    YOLOX-S is pretrained on COCO, not shelf/SKU data, so this stage does not
     infer stock levels or empty shelf positions. It reports only observable object
     coverage and explicitly marks stock assessment as unknown.
     """
