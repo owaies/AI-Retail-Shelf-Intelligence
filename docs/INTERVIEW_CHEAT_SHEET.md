@@ -2,7 +2,7 @@
 
 ## 30-second explanation
 
-AI Retail Shelf Intelligence is a full-stack computer-vision application that lets an authenticated user upload shelf images and turn them into structured visual evidence. A React/TypeScript frontend sends the image to a FastAPI backend, which validates it, preprocesses it with OpenCV, runs YOLOX-Tiny through ONNX Runtime, and persists the analysis and detections in PostgreSQL/Supabase. The UI then provides result visualization, searchable history, record details, deletion, analytics, and CSV export. The current model uses generic COCO classes, so the application deliberately does not claim SKU identity or stock status.
+AI Retail Shelf Intelligence is a full-stack computer-vision application that lets an authenticated user upload shelf images and turn them into structured visual evidence. A React/TypeScript frontend sends the image to a FastAPI backend, which validates it, preprocesses it with OpenCV, runs YOLOX-S through ONNX Runtime, and persists the analysis and detections in PostgreSQL/Supabase. The UI then provides result visualization, searchable history, record details, deletion, analytics, and CSV export. The current model uses generic COCO classes, so the application deliberately does not claim SKU identity or stock status.
 
 ## 2-minute explanation
 
@@ -10,13 +10,13 @@ The problem is that shelf photographs contain useful information but are difficu
 
 The frontend is React with TypeScript and Vite. Supabase Auth handles login, and the frontend keeps the authenticated access token in the browser session and sends it as a bearer token to the API. The backend is FastAPI. Before inference, it validates JPEG/PNG/WebP uploads, checks size, extension, MIME/signature information and OpenCV decodability, then processes the file temporarily.
 
-For vision, OpenCV performs YOLOX-compatible 416×416 letterbox preprocessing. YOLOX-Tiny 0.1.1rc0 runs locally through ONNX Runtime on CPU. The result contains bounding boxes, generic COCO class labels and confidence scores. I map the detections back to the original image dimensions and calculate counts and object coverage.
+For vision, OpenCV performs YOLOX-compatible 640×640 letterbox preprocessing. YOLOX-S 0.1.1rc0 runs locally through ONNX Runtime on CPU. The result contains bounding boxes, generic COCO class labels and confidence scores. I map the detections back to the original image dimensions and calculate counts and object coverage.
 
 The persistence layer stores the authenticated user's analyses and child detection records in PostgreSQL through the configured Supabase database. API reads and deletes are scoped to the authenticated user, so a user cannot request another user's analysis simply by changing an ID.
 
 For Day 4, I added history search, model filtering, sorting, persisted detail inspection, CSV export, deletion confirmation, aggregate class analytics and responsive UI states. The analytics page explicitly states that stock status is not claimed because the current COCO detector is not a retail SKU or inventory model.
 
-The application is deployed on Vercel, CI runs through GitHub Actions, and the production frontend/backend health checks were verified.
+The application is deployed on Vercel and CI runs through GitHub Actions. The latest GitHub Actions run for the current repository head completed successfully.
 
 ---
 
@@ -42,7 +42,7 @@ Supabase provides PostgreSQL plus authentication and a practical hosted developm
 
 The React/Vite frontend is well suited to Vercel's static/SPA deployment model, and the FastAPI backend is deployed separately as its own Vercel project. It also fits the project's free-tier constraint.
 
-### 6. Why YOLOX-Tiny?
+### 6. Why YOLOX-S?
 
 It is substantially lighter than larger detectors and is practical for a prototype that needs object detection without a paid inference API. The service boundary also allows it to be replaced later by a shelf-specific model.
 
@@ -52,7 +52,7 @@ It lets the backend execute the exported detector without depending on a separat
 
 ### 8. Why OpenCV?
 
-OpenCV provides reliable image decoding and the preprocessing needed to transform the input into the model's expected 416×416 letterboxed representation.
+OpenCV provides reliable image decoding and the preprocessing needed to transform the input into the model's expected 640×640 letterboxed representation.
 
 ---
 
@@ -68,7 +68,7 @@ It prevents the API layer from being tightly coupled to YOLOX. A future retail-s
 
 ### 11. How are bounding boxes handled?
 
-The model runs on a 416×416 letterboxed image. After decoding detections, the preprocessing scale and padding are accounted for so coordinates can be mapped back to the original image dimensions.
+The model runs on a 640×640 letterboxed image. After decoding detections, the preprocessing scale and padding are accounted for so coordinates can be mapped back to the original image dimensions.
 
 ### 12. What does object coverage mean?
 
@@ -76,7 +76,7 @@ It is a derived measurement of how much image area is covered by detected object
 
 ### 13. Why not call a bottle an actual retail product?
 
-Because YOLOX-Tiny is using COCO labels. A generic `bottle` class does not identify a brand, SKU, facing count, or inventory quantity. Claiming that would exceed the available evidence.
+Because YOLOX-S is using COCO labels. A generic `bottle` class does not identify a brand, SKU, facing count, or inventory quantity. Claiming that would exceed the available evidence.
 
 ### 14. Why is stock status explicitly not claimed?
 
@@ -184,7 +184,7 @@ The repository remains one GitHub repository, while Vercel has separate frontend
 
 ### 36. What was actually verified?
 
-GitHub Actions passed for the Day 4 commit. The latest frontend Vercel deployment reached `READY`, the production frontend returned HTTP 200, the backend health endpoint returned HTTP 200, and the production backend error/fatal log scan for the checked two-hour window was empty. The authenticated UI workflow was manually exercised.
+GitHub Actions passed for the Day 4 commit. The latest GitHub Actions CI run completed successfully. Vercel projects for the frontend and backend are present; production deployment verification should be refreshed after the current repository changes before making a new live-runtime claim.
 
 ---
 
@@ -216,7 +216,7 @@ It combines frontend engineering, REST APIs, authentication, database design, co
 
 **Backend:** Python + FastAPI
 
-**Vision:** OpenCV → YOLOX-Tiny → ONNX Runtime
+**Vision:** OpenCV → YOLOX-S → ONNX Runtime
 
 **Database:** PostgreSQL / Supabase
 
@@ -228,7 +228,7 @@ It combines frontend engineering, REST APIs, authentication, database design, co
 
 **Input:** JPEG / PNG / WebP, max 10 MB
 
-**Model input:** 416×416 letterbox
+**Model input:** 640×640 letterbox
 
 **Output:** boxes + COCO classes + confidence + counts + object coverage
 
@@ -244,4 +244,4 @@ It combines frontend engineering, REST APIs, authentication, database design, co
 
 **Best architecture sentence:**
 
-> React handles the user workflow, FastAPI orchestrates authenticated analysis, OpenCV prepares images, YOLOX-Tiny extracts generic visual detections, and PostgreSQL/Supabase persists evidence that the frontend turns into searchable history and analytics.
+> React handles the user workflow, FastAPI orchestrates authenticated analysis, OpenCV prepares images, YOLOX-S extracts generic visual detections, and PostgreSQL/Supabase persists evidence that the frontend turns into searchable history and analytics.
