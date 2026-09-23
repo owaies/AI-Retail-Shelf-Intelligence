@@ -149,11 +149,18 @@ def run_evaluation(
             "For the old COCO baseline, use --class-agnostic only as a localization diagnostic."
         )
 
+    if not model_path:
+        raise ValueError(
+            "Evaluation requires an explicit local --model-path. "
+            "This prevents benchmark runs from downloading model weights implicitly."
+        )
+
     detector = VisionService(
         model_path=model_path,
         class_names=model_vocab.names,
         model_name="YOLOX-S",
         model_version="retail-62" if model_path else "0.1.1rc0",
+        allow_model_download=False,
     )
 
     image_paths = [p for p in sorted(image_dir.iterdir()) if p.suffix.lower() in IMAGE_EXTENSIONS]
@@ -208,7 +215,7 @@ def main() -> None:
     parser.add_argument("dataset", type=Path, help="Dataset directory or benchmark split")
     parser.add_argument("--split", type=str, default=None, help="Dataset split (e.g. test, valid)")
     parser.add_argument("--data-yaml", type=Path, default=None, help="Explicit dataset data.yaml")
-    parser.add_argument("--model-path", type=Path, default=None, help="Local ONNX detector to evaluate")
+    parser.add_argument("--model-path", type=Path, required=True, help="Local ONNX detector to evaluate; no implicit downloads")
     parser.add_argument(
         "--model-vocab-yaml",
         type=Path,
