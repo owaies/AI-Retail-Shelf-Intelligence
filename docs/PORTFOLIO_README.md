@@ -8,9 +8,9 @@ This document is the verified portfolio-facing status sheet for **AI Retail Shel
 - **Frontend:** https://ai-retail-shelf-intelligence.vercel.app/
 - **Backend:** https://ai-retail-shelf-intelligence-backen.vercel.app/
 - **Health endpoint:** https://ai-retail-shelf-intelligence-backen.vercel.app/api/health
-- **Current verified commit:** `a13d1274bd9a9e1da3da92f01aee6b7dade168ac`
-- **CI:** GitHub Actions run #111 passed
-- **Production deployment status:** both Vercel checks reported success for the verified commit
+- **Current verified commit:** `6ba4ea2131d114542163330af4beb6ed2fcea1cd`
+- **CI:** GitHub Actions run #120 passed for the previous repository head; the subsequent documentation-only commit is still pending its own run verification.
+- **Production deployment status:** Vercel frontend/backend projects are configured. A fresh live-runtime verification is still required for the latest repository head before recording a new production status.
 
 ## What the product does
 
