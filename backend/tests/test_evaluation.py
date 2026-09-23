@@ -8,7 +8,7 @@ from app.services.evaluation import (
     evaluate_dataset,
     iou,
 )
-from app.services.vision import BoundingBox, DetectionResult
+from app.services.vision import BoundingBox, DetectionResult, VisionService
 from scripts.evaluate_detector import (
     load_ground_truth,
     run_evaluation,
@@ -163,3 +163,11 @@ def test_run_evaluation_rejects_sku_vocabulary_mismatch_without_silent_coco_conv
 
     with pytest.raises(VocabularyMismatchError, match="Class vocabulary mismatch"):
         run_evaluation(dataset_dir)
+
+
+def test_evaluation_vision_service_never_downloads_missing_model(tmp_path: Path):
+    missing_model = tmp_path / "missing.onnx"
+    service = VisionService(model_path=missing_model, allow_model_download=False)
+
+    with pytest.raises(FileNotFoundError, match="Automatic model download is disabled"):
+        service._model_path()
