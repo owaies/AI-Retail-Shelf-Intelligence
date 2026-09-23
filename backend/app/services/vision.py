@@ -70,20 +70,24 @@ class VisionService:
         class_names: Sequence[str] | None = None,
         model_name: str = MODEL_NAME,
         model_version: str = MODEL_VERSION,
+        allow_model_download: bool = True,
     ) -> None:
         self.processor = processor or ImageProcessor(settings.model_input_size)
         self._configured_model_path = Path(model_path) if model_path else None
         self.class_names = tuple(class_names) if class_names else COCO_CLASSES
         self.model_name = model_name
         self.model_version = model_version
+        self.allow_model_download = allow_model_download
         self._session = None
 
     def _model_path(self) -> Path:
         path = self._configured_model_path or Path(settings.model_path)
         if path.exists() and path.stat().st_size > 0:
             return path
-        if self._configured_model_path:
-            raise FileNotFoundError(f"Configured detector model not found: {path}")
+        if self._configured_model_path or not self.allow_model_download:
+            raise FileNotFoundError(
+                f"Detector model not found: {path}. Automatic model download is disabled for this operation."
+            )
         path.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(delete=False, dir=path.parent, suffix=".onnx") as tmp:
             temporary = Path(tmp.name)
