@@ -22,7 +22,12 @@ jobs:
           python-version: '3.12'
       - run: pip install -r requirements.txt
       - run: pip install -r requirements-training.txt
-      - run: pytest
+      - name: Compile backend sources
+        run: python -m compileall -q app scripts tests
+      - name: Run backend tests
+        run: pytest
+      - name: Run evaluation contract tests
+        run: pytest tests/test_evaluation.py
       - name: Start API smoke server
         run: |
           uvicorn app.main:app --host 127.0.0.1 --port 8000 > /tmp/retail-api.log 2>&1 &
