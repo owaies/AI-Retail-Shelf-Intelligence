@@ -62,7 +62,7 @@ class AnalysisRepository:
             cur.execute(
                 f"""SELECT id, image_name, status, detection_count, model_name,
                 model_version, created_at, completed_at
-                FROM {TABLE_ANALYSES} WHERE user_id=%s ORDER BY created_at DESC""",
+                FROM {TABLE_ANALYSES} WHERE user_id=%s ORDER BY created_at DESC, id DESC""",
                 (user_id,),
             )
             columns = [d.name for d in cur.description]
