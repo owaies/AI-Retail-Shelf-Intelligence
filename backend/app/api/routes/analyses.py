@@ -45,10 +45,13 @@ async def create_analysis(
 ) -> AnalysisResponse:
     if not database_configured():
         raise HTTPException(status_code=503, detail="DATABASE_URL is not configured")
+    max_upload_bytes = 10 * 1024 * 1024
     try:
-        if file.size is not None and file.size > 10 * 1024 * 1024:
+        if file.size is not None and file.size > max_upload_bytes:
             raise HTTPException(status_code=413, detail="Image exceeds the 10 MB upload limit")
-        data = await file.read()
+        data = await file.read(max_upload_bytes + 1)
+        if len(data) > max_upload_bytes:
+            raise HTTPException(status_code=413, detail="Image exceeds the 10 MB upload limit")
         validate_image_upload(file.filename, file.content_type, data)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
