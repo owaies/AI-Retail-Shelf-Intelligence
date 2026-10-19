@@ -49,3 +49,11 @@ def test_rejects_malformed_content_length_before_dispatch():
     assert sent[0]["type"] == "http.response.start"
     assert sent[0]["status"] == 400
     assert downstream_called is False
+
+
+def test_rejects_negative_content_length_before_dispatch():
+    sent, downstream_called = run_middleware(b"-1")
+
+    assert sent[0]["type"] == "http.response.start"
+    assert sent[0]["status"] == 400
+    assert downstream_called is False
