@@ -26,7 +26,10 @@ class BodySizeLimitMiddleware:
         raw_length = headers.get(b"content-length")
         if raw_length is not None:
             try:
-                if int(raw_length) > self.max_bytes:
+                declared_length = int(raw_length)
+                if declared_length < 0:
+                    raise ValueError("Content-Length cannot be negative")
+                if declared_length > self.max_bytes:
                     response = Response("Request body too large", status_code=413)
                     await response(scope, receive, send)
                     return
