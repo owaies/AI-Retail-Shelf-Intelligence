@@ -35,31 +35,35 @@ class BodySizeLimitMiddleware:
                 await response(scope, receive, send)
                 return
 
+        body_messages: list[Message] = []
         received = 0
-        exhausted = False
-
-        async def limited_receive() -> Message:
-            nonlocal received, exhausted
+        while True:
             message = await receive()
             if message["type"] != "http.request":
-                return message
-            body = message.get("body", b"")
-            received += len(body)
-            if received > self.max_bytes:
-                exhausted = True
-                return {"type": "http.disconnect"}
-            if not message.get("more_body", False):
-                exhausted = True
-            return message
+                body_messages.append(message)
+                break
 
-        try:
-            await self.app(scope, limited_receive, send)
-        except Exception:
-            if exhausted and received > self.max_bytes:
+            received += len(message.get("body", b""))
+            if received > self.max_bytes:
                 response = Response("Request body too large", status_code=413)
                 await response(scope, receive, send)
                 return
-            raise
+
+            body_messages.append(message)
+            if not message.get("more_body", False):
+                break
+
+        message_index = 0
+
+        async def replay_receive() -> Message:
+            nonlocal message_index
+            if message_index < len(body_messages):
+                message = body_messages[message_index]
+                message_index += 1
+                return message
+            return await receive()
+
+        await self.app(scope, replay_receive, send)
 
 
 app = FastAPI(title=settings.app_name, version="0.2.0")
