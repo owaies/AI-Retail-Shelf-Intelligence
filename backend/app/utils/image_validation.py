@@ -26,5 +26,8 @@ def validate_image_upload(filename: str | None, content_type: str | None, data: 
 
 def safe_filename(filename: str | None) -> str:
     """Return a safe display name; never use it as a filesystem path."""
-    name = Path(filename or "image").name.replace("..", "_")
+    # Browser uploads can contain Windows separators even when the server runs
+    # on POSIX, so normalize both separator styles before taking the basename.
+    normalized = (filename or "image").replace("\\", "/")
+    name = Path(normalized).name.replace("..", "_")
     return name[:255] or "image"
