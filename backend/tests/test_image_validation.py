@@ -1,6 +1,6 @@
 import pytest
 
-from app.utils.image_validation import validate_image_upload
+from app.utils.image_validation import safe_filename, validate_image_upload
 
 
 JPEG = b"\xff\xd8\xff" + b"x" * 20
@@ -30,3 +30,22 @@ def test_invalid_uploads_are_rejected(filename: str, content_type: str, data: by
 
 def test_webp_signature_is_supported() -> None:
     validate_image_upload("shelf.webp", "image/webp", WEBP)
+
+
+
+@pytest.mark.parametrize(
+    "filename, expected",
+    [
+        ("C:\\Users\\person\\shelf.png", "shelf.png"),
+        ("../../etc/passwd", "passwd"),
+        ("..\\..\\secrets.txt", "secrets.txt"),
+        ("", "image"),
+        (None, "image"),
+    ],
+)
+def test_safe_filename_strips_cross_platform_path_components(filename, expected) -> None:
+    assert safe_filename(filename) == expected
+
+
+def test_safe_filename_limits_display_name_length() -> None:
+    assert len(safe_filename("a" * 300 + ".png")) == 255
