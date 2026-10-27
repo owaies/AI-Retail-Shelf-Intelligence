@@ -17,11 +17,21 @@ def test_valid_jpeg_upload() -> None:
     [
         ("shelf.exe", "image/jpeg", JPEG),
         ("shelf.jpg", "application/octet-stream", JPEG),
+        ("shelf.png", "image/jpeg", JPEG),
+        ("shelf.jpg", "image/png", PNG),
         ("shelf.jpg", "image/jpeg", PNG),
         ("shelf.jpg", "image/jpeg", b"not-an-image"),
         ("shelf.jpg", "image/jpeg", b"x" * (10 * 1024 * 1024 + 1)),
     ],
-    ids=["invalid_extension", "invalid_content_type", "signature_mismatch", "corrupt_data", "oversized_payload"],
+    ids=[
+        "invalid_extension",
+        "invalid_content_type",
+        "extension_mime_mismatch_jpeg_png",
+        "extension_mime_mismatch_png_jpeg",
+        "signature_mismatch",
+        "corrupt_data",
+        "oversized_payload",
+    ],
 )
 def test_invalid_uploads_are_rejected(filename: str, content_type: str, data: bytes) -> None:
     with pytest.raises(ValueError):
@@ -30,7 +40,6 @@ def test_invalid_uploads_are_rejected(filename: str, content_type: str, data: by
 
 def test_webp_signature_is_supported() -> None:
     validate_image_upload("shelf.webp", "image/webp", WEBP)
-
 
 
 @pytest.mark.parametrize(
