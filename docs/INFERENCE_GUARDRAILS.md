@@ -10,3 +10,10 @@ Do not infer SKU identity, exact inventory levels, or out-of-stock status unless
 
 ## Regression
 Keep a fixed test image set and compare detection behavior after changes to preprocessing, confidence thresholds, or model versions.
+
+
+## Image preprocessing bounds
+
+Letterboxing must keep both resized dimensions at least one pixel. Very wide or
+very tall valid images can otherwise round the short dimension down to zero
+before OpenCV resizing. Regression tests cover both extreme orientations.
