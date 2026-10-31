@@ -33,8 +33,11 @@ class ImageProcessor:
 
         padded = np.full((*self.input_size, 3), 114, dtype=np.uint8)
         ratio = min(self.input_size[0] / height, self.input_size[1] / width)
-        resized_w = int(width * ratio)
-        resized_h = int(height * ratio)
+        # Extremely thin panoramas can round one scaled dimension down to zero.
+        # Keep both dimensions valid for OpenCV while preserving the aspect ratio
+        # as closely as the fixed-size letterbox allows.
+        resized_w = max(1, int(width * ratio))
+        resized_h = max(1, int(height * ratio))
         resized = cv2.resize(image, (resized_w, resized_h), interpolation=cv2.INTER_LINEAR)
         padded[:resized_h, :resized_w] = resized
         tensor = np.ascontiguousarray(padded.transpose(2, 0, 1), dtype=np.float32)
