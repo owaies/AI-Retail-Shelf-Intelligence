@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from io import BytesIO
 from pathlib import Path
+
+from PIL import Image
 
 ALLOWED_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
@@ -10,7 +13,13 @@ EXTENSION_MIME_TYPES = {
     ".png": "image/png",
     ".webp": "image/webp",
 }
+PIL_FORMATS = {
+    "image/jpeg": "JPEG",
+    "image/png": "PNG",
+    "image/webp": "WEBP",
+}
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
+MAX_IMAGE_PIXELS = 40_000_000
 MAGIC = {
     "image/jpeg": lambda data: data.startswith(b"\xff\xd8\xff"),
     "image/png": lambda data: data.startswith(b"\x89PNG\r\n\x1a\n"),
@@ -30,6 +39,21 @@ def validate_image_upload(filename: str | None, content_type: str | None, data: 
         raise ValueError("Image must be between 1 byte and 10 MB.")
     if not MAGIC[content_type](data[:32]):
         raise ValueError("Image content does not match the declared MIME type.")
+
+    # Inspect image headers before OpenCV decodes pixels. A small compressed
+    # upload can expand into a very large image and exhaust inference memory.
+    try:
+        with Image.open(BytesIO(data)) as image:
+            if image.format != PIL_FORMATS[content_type]:
+                raise ValueError("Image content does not match the declared MIME type.")
+            width, height = image.size
+            if width < 1 or height < 1 or width * height > MAX_IMAGE_PIXELS:
+                raise ValueError("Image dimensions must not exceed 40 megapixels.")
+            image.verify()
+    except ValueError:
+        raise
+    except Exception as exc:
+        raise ValueError("Image content is not a valid supported image.") from exc
 
 
 def safe_filename(filename: str | None) -> str:
