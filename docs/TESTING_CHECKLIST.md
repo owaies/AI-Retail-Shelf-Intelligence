@@ -3,9 +3,10 @@
 Use this checklist when changing the shelf-analysis workflow.
 
 ## Input validation
-- Test supported JPEG, PNG, and WebP uploads.
-- Test oversized files.
-- Test invalid or corrupted image data.
+- Test supported JPEG, PNG, and WebP uploads using valid encoded image files.
+- Test oversized compressed files.
+- Test images whose decoded dimensions exceed 40 megapixels, even when the compressed upload is small.
+- Test invalid or corrupted image data and mismatched filename, MIME type, and actual image format.
 - Confirm rejected uploads do not create analysis records.
 
 ## Detection
