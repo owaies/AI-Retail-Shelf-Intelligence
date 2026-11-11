@@ -90,3 +90,17 @@ def test_safe_filename_strips_cross_platform_path_components(filename, expected)
 
 def test_safe_filename_limits_display_name_length() -> None:
     assert len(safe_filename("a" * 300 + ".png")) == 255
+
+
+def test_custom_upload_limit_accepts_exact_boundary() -> None:
+    validate_image_upload("shelf.jpg", "image/jpeg", JPEG, max_bytes=len(JPEG))
+
+
+def test_custom_upload_limit_rejects_payload_above_boundary() -> None:
+    with pytest.raises(ValueError, match=f"between 1 byte and {len(JPEG) - 1} bytes"):
+        validate_image_upload("shelf.jpg", "image/jpeg", JPEG, max_bytes=len(JPEG) - 1)
+
+
+def test_custom_upload_limit_must_be_positive() -> None:
+    with pytest.raises(ValueError, match="positive number"):
+        validate_image_upload("shelf.jpg", "image/jpeg", JPEG, max_bytes=0)
