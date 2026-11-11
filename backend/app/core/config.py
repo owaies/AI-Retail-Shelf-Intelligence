@@ -1,4 +1,4 @@
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -28,6 +28,19 @@ class Settings(BaseSettings):
     max_model_bytes: int = 80 * 1024 * 1024
     max_upload_bytes: int = 10 * 1024 * 1024
     max_request_body_bytes: int = 12 * 1024 * 1024
+
+    @field_validator("max_model_bytes", "max_upload_bytes", "max_request_body_bytes")
+    @classmethod
+    def ensure_positive_size_limits(cls, value: int) -> int:
+        if value < 1:
+            raise ValueError("Configured byte limits must be positive integers.")
+        return value
+
+    @model_validator(mode="after")
+    def ensure_request_limit_covers_upload_limit(self) -> "Settings":
+        if self.max_request_body_bytes < self.max_upload_bytes:
+            raise ValueError("max_request_body_bytes must be at least max_upload_bytes.")
+        return self
 
     @field_validator("cors_origins")
     @classmethod
