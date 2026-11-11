@@ -8,6 +8,9 @@ Use this checklist when changing the shelf-analysis workflow.
 - Test images whose decoded dimensions exceed 40 megapixels, even when the compressed upload is small.
 - Test invalid or corrupted image data and mismatched filename, MIME type, and actual image format.
 - Confirm rejected uploads do not create analysis records.
+- Override `MAX_UPLOAD_BYTES` and confirm the analysis endpoint enforces the configured byte limit.
+- Confirm startup rejects non-positive model, upload, or request-body limits.
+- Confirm `MAX_REQUEST_BODY_BYTES` is not smaller than `MAX_UPLOAD_BYTES`.
 
 ## Detection
 - Confirm bounding boxes remain inside image dimensions.
