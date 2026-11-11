@@ -27,7 +27,16 @@ MAGIC = {
 }
 
 
-def validate_image_upload(filename: str | None, content_type: str | None, data: bytes) -> None:
+def validate_image_upload(
+    filename: str | None,
+    content_type: str | None,
+    data: bytes,
+    *,
+    max_bytes: int = MAX_IMAGE_BYTES,
+) -> None:
+    if max_bytes < 1:
+        raise ValueError("Image upload limit must be a positive number of bytes.")
+
     extension = Path(filename or "").suffix.lower()
     if content_type not in ALLOWED_MIME_TYPES:
         raise ValueError("Unsupported image MIME type. Use JPEG, PNG or WebP.")
@@ -35,8 +44,8 @@ def validate_image_upload(filename: str | None, content_type: str | None, data: 
         raise ValueError("Unsupported image extension. Use .jpg, .jpeg, .png or .webp.")
     if EXTENSION_MIME_TYPES[extension] != content_type:
         raise ValueError("Image extension does not match the declared MIME type.")
-    if len(data) <= 0 or len(data) > MAX_IMAGE_BYTES:
-        raise ValueError("Image must be between 1 byte and 10 MB.")
+    if len(data) <= 0 or len(data) > max_bytes:
+        raise ValueError(f"Image must be between 1 byte and {max_bytes} bytes.")
     if not MAGIC[content_type](data[:32]):
         raise ValueError("Image content does not match the declared MIME type.")
 
