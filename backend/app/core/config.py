@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     max_upload_bytes: int = 10 * 1024 * 1024
     max_request_body_bytes: int = 12 * 1024 * 1024
 
+    @field_validator("detection_confidence", "nms_iou_threshold")
+    @classmethod
+    def ensure_probability_threshold(cls, value: float) -> float:
+        if not 0.0 <= value <= 1.0:
+            raise ValueError("Detection thresholds must be between 0 and 1.")
+        return value
+
     @field_validator("max_model_bytes", "max_upload_bytes", "max_request_body_bytes")
     @classmethod
     def ensure_positive_size_limits(cls, value: int) -> int:
