@@ -11,6 +11,8 @@ Use this checklist when changing the shelf-analysis workflow.
 - Override `MAX_UPLOAD_BYTES` and confirm the analysis endpoint enforces the configured byte limit.
 - Confirm startup rejects non-positive model, upload, or request-body limits.
 - Confirm `MAX_REQUEST_BODY_BYTES` is not smaller than `MAX_UPLOAD_BYTES`.
+- Confirm startup rejects detection-confidence and NMS IoU thresholds below 0, above 1, or set to NaN/infinity.
+- Confirm threshold boundary values of 0 and 1 remain accepted.
 
 ## Detection
 - Confirm bounding boxes remain inside image dimensions.
