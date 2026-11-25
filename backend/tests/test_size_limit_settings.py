@@ -38,3 +38,21 @@ def test_valid_custom_media_limits_are_preserved() -> None:
     assert settings.max_model_bytes == 4096
     assert settings.max_upload_bytes == 2048
     assert settings.max_request_body_bytes == 3072
+
+
+@pytest.mark.parametrize("field", ["detection_confidence", "nms_iou_threshold"])
+@pytest.mark.parametrize("value", [-0.01, 1.01, float("nan"), float("inf"), float("-inf")])
+def test_detection_probability_thresholds_must_be_finite_and_bounded(field: str, value: float) -> None:
+    with pytest.raises(ValidationError, match="Detection thresholds"):
+        Settings(_env_file=None, **{field: value})
+
+
+def test_detection_probability_threshold_boundaries_are_valid() -> None:
+    settings = Settings(
+        _env_file=None,
+        detection_confidence=0.0,
+        nms_iou_threshold=1.0,
+    )
+
+    assert settings.detection_confidence == 0.0
+    assert settings.nms_iou_threshold == 1.0
