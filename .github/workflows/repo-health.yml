@@ -27,6 +27,21 @@ jobs:
           npm install --ignore-scripts
           node -e "const p=require('./package.json'); const s=p.scripts||{}; if(s.lint) require('child_process').execFileSync('npm',['run','lint'],{stdio:'inherit'}); if(s.build) require('child_process').execFileSync('npm',['run','build'],{stdio:'inherit'});"
 
+      - name: Set up Python
+        if: ${{ hashFiles('backend/requirements.txt') != '' }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install backend dependencies
+        if: ${{ hashFiles('backend/requirements.txt') != '' }}
+        run: python -m pip install -r backend/requirements.txt
+
+      - name: Run backend tests
+        if: ${{ hashFiles('backend/tests/test_*.py') != '' }}
+        working-directory: backend
+        run: python -m pytest tests -q
+
       - name: Validate Python sources
         if: ${{ hashFiles('**/*.py') != '' }}
         shell: bash
